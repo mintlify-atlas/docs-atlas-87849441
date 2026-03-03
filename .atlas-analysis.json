@@ -1,0 +1,102 @@
+{
+  "projectType": "saas",
+  "projectName": "OrionRides",
+  "projectDescription": "A full-stack MERN car rental platform that allows users to browse vehicles, book rentals, and manage reservations with JWT authentication.",
+  "theme": "palm",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#60A5FA",
+  "darkColor": "#1E40AF",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/authentication",
+              "features/vehicle-browsing",
+              "features/booking-system",
+              "features/user-dashboard"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/setup",
+              "guides/configuration",
+              "guides/deployment"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api/overview", "api/authentication"]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/user",
+              "api/vehicles",
+              "api/bookings"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api/models/user",
+              "api/models/car",
+              "api/models/rental"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Frontend",
+        "groups": [
+          {
+            "group": "Components",
+            "pages": [
+              "frontend/components",
+              "frontend/routing",
+              "frontend/state-management"
+            ]
+          },
+          {
+            "group": "Styling",
+            "pages": [
+              "frontend/design-system",
+              "frontend/animations"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT-based user authentication with bcrypt password hashing",
+    "Vehicle browsing with filtering by type, capacity, and availability",
+    "Real-time booking system with date validation and price calculation",
+    "User dashboard for managing active and past rentals",
+    "Responsive React frontend with Framer Motion animations",
+    "Automated rental expiration handling"
+  ],
+  "publicApiSurface": [
+    "POST /api/user/register - Register new user",
+    "POST /api/user/login - Authenticate user",
+    "GET /api/user - Get authenticated user profile",
+    "GET /api/vehicles - List all available vehicles",
+    "GET /api/vehicles/:id - Get vehicle details",
+    "POST /api/book-ride/:car_id - Book a car rental",
+    "POST /api/cancel-ride/:car_id - Cancel active rental",
+    "GET /api/cancel-expired-rentals - Expire outdated rentals"
+  ]
+}
