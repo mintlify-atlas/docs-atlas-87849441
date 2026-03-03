@@ -1,0 +1,435 @@
+---
+title: 'React Router Setup'
+description: 'React Router v6 configuration and navigation patterns in OrionRides'
+icon: 'route'
+---
+
+## Overview
+
+OrionRides uses **React Router v6** for client-side routing with animated page transitions powered by Framer Motion. The routing system is configured in `main.jsx` and implemented in the `Routing` component.
+
+## Router Configuration
+
+### Main Entry Point
+
+The BrowserRouter is configured at the application root in `main.jsx`:
+
+**Location:** `src/main.jsx:11`
+
+```jsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import { BrowserRouter } from 'react-router-dom'
+import { ToastProvider } from './contexts/ToastContext.jsx'
+import { AuthProvider } from './contexts/AuthContext.jsx'
+import { LoginModalProvider } from './contexts/LoginModalContext.jsx'
+import { VehicleProvider } from './contexts/VehicleContext.jsx'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <AuthProvider>
+      <BrowserRouter>
+        <ToastProvider>
+          <VehicleProvider>
+            <LoginModalProvider>
+              <App />
+            </LoginModalProvider>
+          </VehicleProvider>
+        </ToastProvider>
+      </BrowserRouter>
+    </AuthProvider>
+  </React.StrictMode>
+)
+```
+
+### Provider Hierarchy
+
+The routing context is nested within multiple providers:
+
+1. **AuthProvider** (outermost) - Authentication state
+2. **BrowserRouter** - Routing context
+3. **ToastProvider** - Toast notifications
+4. **VehicleProvider** - Vehicle data
+5. **LoginModalProvider** - Login modal state
+
+This hierarchy ensures all route components have access to global state.
+
+## Route Structure
+
+### Routing Component
+
+The main routing logic is centralized in the `Routing` utility component:
+
+**Location:** `src/utils/Routing.jsx:11`
+
+```jsx
+import React from 'react'
+import { Route, Routes } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
+import Home from '../components/Home'
+import VehiclePage from '../components/VehiclePage'
+import VehicleDetails from '../components/VehicleDetails'
+import About from '../components/About'
+import NotFoundPage from '../components/NotFoundPage'
+
+const Routing = () => {
+    let location = useLocation()
+    let pathname = location.pathname
+    
+    return (
+        <AnimatePresence mode='wait'>
+            <Routes location={location} key={location.pathname}>
+                <Route path='/' element={<Home />} />
+                <Route path='/vehicles' element={<VehiclePage />} />
+                <Route path='/vehicles/:vehicleId' element={<VehicleDetails />} />
+                <Route path='/about' element={<About />} />
+                <Route path='*' element={<NotFoundPage />} />
+            </Routes>
+        </AnimatePresence>
+    )
+}
+
+export default Routing
+```
+
+### Route Definitions
+
+<CardGroup cols={2}>
+  <Card title="Home Route" icon="house">
+    **Path:** `/`
+    
+    **Component:** `Home`
+    
+    Landing page with hero section, categories, and featured vehicles.
+  </Card>
+  
+  <Card title="Vehicles List" icon="car">
+    **Path:** `/vehicles`
+    
+    **Component:** `VehiclePage`
+    
+    Browse all available vehicles with search and filtering.
+  </Card>
+  
+  <Card title="Vehicle Details" icon="circle-info">
+    **Path:** `/vehicles/:vehicleId`
+    
+    **Component:** `VehicleDetails`
+    
+    Detailed view of a specific vehicle with booking functionality. Uses dynamic route parameter.
+  </Card>
+  
+  <Card title="About Page" icon="address-card">
+    **Path:** `/about`
+    
+    **Component:** `About`
+    
+    Information about OrionRides services.
+  </Card>
+</CardGroup>
+
+### 404 Handling
+
+The wildcard route (`path='*'`) catches all unmatched URLs:
+
+```jsx
+<Route path='*' element={<NotFoundPage />} />
+```
+
+This ensures users see a friendly error page instead of a blank screen.
+
+## Navigation Patterns
+
+### Declarative Navigation with NavLink
+
+The Navbar uses `NavLink` for navigation with automatic active state styling:
+
+**Location:** `src/components/Navbar.jsx:46`
+
+```jsx
+import { NavLink } from 'react-router-dom'
+
+const Navbar = () => {
+    return (
+        <nav>
+            <div className="nav-left">
+                <NavLink to="/">OrionRides.</NavLink>
+            </div>
+            <div className="nav-right">
+                <NavLink to="/">Home</NavLink>
+                <NavLink to="/vehicles">Vehicles</NavLink>
+                <NavLink to="/about">About</NavLink>
+            </div>
+        </nav>
+    )
+}
+```
+
+**Benefits:**
+- Automatic `.active` class on current route
+- Accessible navigation with proper semantics
+- Prevents full page reloads
+
+### Programmatic Navigation
+
+Components use the `useNavigate` hook for programmatic routing:
+
+**Location:** `src/components/VehicleCards.jsx:30`
+
+```jsx
+import { useNavigate } from 'react-router-dom'
+
+const VehicleCards = ({ cars }) => {
+    const navigate = useNavigate();
+    
+    const detailBtnHandler = (index) => {
+        navigate(`/vehicles/${filteredCars[index]._id}`);
+    };
+
+    return (
+        <button onClick={() => detailBtnHandler(index)}>
+            Check Details
+        </button>
+    )
+}
+```
+
+**Use Cases:**
+- Button click navigation
+- Conditional redirects
+- Post-form submission navigation
+
+### Link Component in Modals
+
+The ProfileModal uses `Link` for inline navigation:
+
+**Location:** `src/components/ProfileModal.jsx:130`
+
+```jsx
+import { Link } from 'react-router-dom'
+
+{user.cars_rented.length === 0 ? (
+    <p>
+        No rentals yet!{' '}
+        <Link to="/vehicles" onClick={() => closeProfileModal()}>
+            Explore cars now!
+        </Link>
+    </p>
+) : (
+    <h3>Your rentals</h3>
+)}
+```
+
+## Dynamic Route Parameters
+
+### Vehicle Details Route
+
+The vehicle details page uses URL parameters to fetch specific vehicles:
+
+```jsx
+<Route path='/vehicles/:vehicleId' element={<VehicleDetails />} />
+```
+
+In the component, access the parameter using `useParams`:
+
+```jsx
+import { useParams } from 'react-router-dom'
+
+const VehicleDetails = () => {
+    const { vehicleId } = useParams();
+    
+    // Fetch vehicle data using vehicleId
+    useEffect(() => {
+        fetch(`${API_URL}/api/vehicles/${vehicleId}`)
+            .then(res => res.json())
+            .then(data => setVehicle(data))
+    }, [vehicleId])
+}
+```
+
+## Animated Page Transitions
+
+### AnimatePresence Integration
+
+The routing system integrates with Framer Motion's `AnimatePresence` for smooth page transitions:
+
+**Location:** `src/utils/Routing.jsx:16`
+
+```jsx
+<AnimatePresence mode='wait'>
+    <Routes location={location} key={location.pathname}>
+        {/* Routes */}
+    </Routes>
+</AnimatePresence>
+```
+
+**Key Configuration:**
+- `mode='wait'` - Wait for exit animation before entering new route
+- `key={location.pathname}` - Trigger animations on route change
+- `location={location}` - Track location for animations
+
+### Page Component Animations
+
+Route components implement their own enter/exit animations:
+
+```jsx
+const Home = () => {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+        >
+            {/* Page content */}
+        </motion.div>
+    )
+}
+```
+
+## Scroll Management
+
+### Auto-Scroll to Top
+
+The App component ensures pages scroll to top on navigation:
+
+**Location:** `src/App.jsx:25`
+
+```jsx
+import { useLocation } from 'react-router-dom'
+
+const App = () => {
+    let location = useLocation()
+    let pathname = location.pathname
+    
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" })
+    }, [pathname])
+
+    return (
+        // App content
+    )
+}
+```
+
+This creates a native-like experience by resetting scroll position on route changes.
+
+## Protected Routes Pattern
+
+While the current implementation doesn't use protected routes, the authentication system supports this pattern:
+
+```jsx
+// Example protected route implementation
+const ProtectedRoute = ({ children }) => {
+    const { authToken } = useAuth();
+    
+    if (!authToken) {
+        return <Navigate to="/" replace />;
+    }
+    
+    return children;
+};
+
+// Usage
+<Route 
+    path='/profile' 
+    element={
+        <ProtectedRoute>
+            <ProfilePage />
+        </ProtectedRoute>
+    } 
+/>
+```
+
+### Current Authentication Flow
+
+Instead of route-level protection, OrionRides uses:
+
+1. **Modal-based authentication** - Login/signup happens in modals
+2. **Component-level checks** - Protected features (booking, profile) check `authToken`
+3. **Conditional rendering** - UI adapts based on auth state
+
+**Example from BookRide:**
+
+```jsx
+const BookRideFunction = async () => {
+    let res = await fetch(`/api/book-ride/${carId}`, {
+        headers: {
+            "Authorization": `Bearer ${authToken}`
+        },
+        method: "POST",
+        body: JSON.stringify(formData)
+    });
+}
+```
+
+## Route Organization Best Practices
+
+### Centralized Routing
+
+**Benefits:**
+- Single source of truth for all routes
+- Easier to maintain and update
+- Clear application structure
+- Simplified testing
+
+### Lazy Loading (Future Enhancement)
+
+For larger applications, implement code splitting:
+
+```jsx
+import { lazy, Suspense } from 'react'
+
+const VehiclePage = lazy(() => import('../components/VehiclePage'))
+const VehicleDetails = lazy(() => import('../components/VehicleDetails'))
+
+const Routing = () => {
+    return (
+        <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+                <Route path='/vehicles' element={<VehiclePage />} />
+                <Route path='/vehicles/:vehicleId' element={<VehicleDetails />} />
+            </Routes>
+        </Suspense>
+    )
+}
+```
+
+## Navigation Guards
+
+Implement navigation guards for complex flows:
+
+```jsx
+import { useNavigate, useLocation } from 'react-router-dom'
+
+const useNavigationGuard = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    
+    const guardedNavigate = (to, options = {}) => {
+        // Add custom logic before navigation
+        if (hasUnsavedChanges) {
+            if (window.confirm('You have unsaved changes. Continue?')) {
+                navigate(to, options);
+            }
+        } else {
+            navigate(to, options);
+        }
+    };
+    
+    return guardedNavigate;
+};
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Component Architecture" icon="cube" href="/frontend/components">
+    Explore React component structure and patterns
+  </Card>
+  <Card title="State Management" icon="database" href="/frontend/state-management">
+    Learn about Context API and global state
+  </Card>
+</CardGroup>

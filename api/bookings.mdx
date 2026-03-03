@@ -1,0 +1,323 @@
+---
+title: 'Booking Endpoints'
+description: 'Manage vehicle reservations and rentals'
+---
+
+## Book a Ride
+
+<api>POST /api/book-ride/:car_id</api>
+
+Create a new vehicle rental booking.
+
+<Note>
+  This endpoint requires authentication. Include the JWT token in the Authorization header.
+</Note>
+
+### Path Parameters
+
+<ParamField path="car_id" type="string" required>
+  The unique identifier of the vehicle to book (MongoDB ObjectId)
+</ParamField>
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Full name of the person renting the vehicle
+</ParamField>
+
+<ParamField body="age" type="number" required>
+  Age of the renter
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Contact email address
+</ParamField>
+
+<ParamField body="phone_no" type="string" required>
+  Contact phone number
+</ParamField>
+
+<ParamField body="address" type="string" required>
+  Physical address of the renter
+</ParamField>
+
+<ParamField body="pincode" type="number" required>
+  Postal/ZIP code
+</ParamField>
+
+<ParamField body="pick_up_date" type="string" required>
+  Date and time for vehicle pickup (ISO 8601 format)
+</ParamField>
+
+<ParamField body="drop_off_date" type="string" required>
+  Date and time for vehicle return (ISO 8601 format)
+</ParamField>
+
+### Date Validation Rules
+
+<Warning>
+  - Pick-up date must be in the future
+  - Drop-off date must be after the pick-up date
+  - Both dates must be valid ISO 8601 formatted strings
+  - Invalid dates will return a 400 error
+</Warning>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="car" type="object">
+  Updated vehicle object with availability set to false and current_owner assigned
+</ResponseField>
+
+<ResponseField name="rentedCar" type="object">
+  The created rental booking object
+</ResponseField>
+
+<ResponseField name="rentedCar.owner" type="string">
+  User ID of the renter
+</ResponseField>
+
+<ResponseField name="rentedCar.car" type="string">
+  Vehicle ID
+</ResponseField>
+
+<ResponseField name="rentedCar.status" type="string">
+  Rental status ("active", "cancelled", or "expired")
+</ResponseField>
+
+<ResponseField name="rentedCar.total_price" type="number">
+  Total rental cost (calculated as rental_duration × price_per_day)
+</ResponseField>
+
+<ResponseField name="rentedCar.rental_duration" type="number">
+  Number of days for the rental period
+</ResponseField>
+
+<ResponseField name="rentedCar.pick_up_date" type="string">
+  ISO 8601 timestamp for pickup
+</ResponseField>
+
+<ResponseField name="rentedCar.drop_off_date" type="string">
+  ISO 8601 timestamp for return
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.orionrides.com/api/book-ride/507f191e810c19729de860ea \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "age": 30,
+    "email": "john@example.com",
+    "phone_no": "+1-555-0123",
+    "address": "123 Main Street, Apartment 4B",
+    "pincode": 10001,
+    "pick_up_date": "2026-03-10T10:00:00.000Z",
+    "drop_off_date": "2026-03-15T10:00:00.000Z"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "message": "Car booked successfully!",
+  "car": {
+    "_id": "507f191e810c19729de860ea",
+    "brand_name": "Toyota",
+    "car_name": "Camry",
+    "availability": false,
+    "current_owner": "507f1f77bcf86cd799439011",
+    "price_per_day": 75,
+    ...
+  },
+  "rentedCar": {
+    "_id": "507f191e810c19729de860ec",
+    "owner": "507f1f77bcf86cd799439011",
+    "car": "507f191e810c19729de860ea",
+    "name": "John Doe",
+    "age": 30,
+    "email": "john@example.com",
+    "phone_no": "+1-555-0123",
+    "address": "123 Main Street, Apartment 4B",
+    "pincode": 10001,
+    "status": "active",
+    "total_price": 375,
+    "pick_up_date": "2026-03-10T10:00:00.000Z",
+    "drop_off_date": "2026-03-15T10:00:00.000Z",
+    "rental_duration": 5,
+    "createdAt": "2026-03-03T14:30:00.000Z",
+    "updatedAt": "2026-03-03T14:30:00.000Z"
+  }
+}
+```
+
+```json 400 Invalid Dates
+{
+  "message": "Invalid dates provided"
+}
+```
+
+```json 400 Date Validation Error
+{
+  "message": "Pick-up date must be in the future, and drop-off date must be after the pick-up date."
+}
+```
+
+```json 404 Car Not Available
+{
+  "message": "Car not available or not found!"
+}
+```
+
+```json 500 Error
+{
+  "message": "Error renting car!",
+  "error": "Error details"
+}
+```
+</ResponseExample>
+
+---
+
+## Cancel a Ride
+
+<api>POST /api/cancel-ride/:car_id</api>
+
+Cancel an active vehicle rental and make the vehicle available again.
+
+<Note>
+  This endpoint requires authentication. Include the JWT token in the Authorization header.
+</Note>
+
+### Path Parameters
+
+<ParamField path="car_id" type="string" required>
+  The unique identifier of the rented vehicle to cancel (MongoDB ObjectId)
+</ParamField>
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="car" type="object">
+  Updated vehicle object with availability set to true and current_owner cleared
+</ResponseField>
+
+<ResponseField name="rentedCar" type="object">
+  Updated rental object with status changed to "cancelled"
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.orionrides.com/api/cancel-ride/507f191e810c19729de860ea \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "message": "Car rental cancelled successfully!",
+  "car": {
+    "_id": "507f191e810c19729de860ea",
+    "brand_name": "Toyota",
+    "car_name": "Camry",
+    "availability": true,
+    "current_owner": null,
+    ...
+  },
+  "rentedCar": {
+    "_id": "507f191e810c19729de860ec",
+    "owner": "507f1f77bcf86cd799439011",
+    "car": "507f191e810c19729de860ea",
+    "status": "cancelled",
+    "total_price": 375,
+    ...
+  }
+}
+```
+
+```json 404 Car Not Found
+{
+  "message": "Car not found!"
+}
+```
+
+```json 404 Rental Not Found
+{
+  "message": "Rental not found for this user and car!"
+}
+```
+
+```json 500 Error
+{
+  "message": "Error cancelling car rental!",
+  "error": "Error details"
+}
+```
+</ResponseExample>
+
+---
+
+## Cancel Expired Rentals
+
+<api>GET /api/cancel-expired-rentals</api>
+
+System endpoint that marks rentals as expired and makes vehicles available when the drop-off date has passed.
+
+<Info>
+  This endpoint is typically called by a scheduled task/cron job. It does not require authentication.
+</Info>
+
+### Behavior
+
+- Finds all rentals where `drop_off_date` is in the past
+- Excludes rentals already marked as "expired"
+- Updates matching rentals to status "expired"
+- Sets vehicle availability to true and clears current_owner
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message indicating expired rentals were updated
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET https://api.orionrides.com/api/cancel-expired-rentals
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "message": "Expired rentals have been updated successfully!"
+}
+```
+
+```json 500 Error
+{
+  "message": "Error cancelling expired rentals",
+  "error": "Error details"
+}
+```
+</ResponseExample>

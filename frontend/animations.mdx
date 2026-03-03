@@ -1,0 +1,482 @@
+---
+title: Animations
+description: Framer Motion integration and animation patterns used throughout OrionRides
+---
+
+OrionRides uses Framer Motion for all React-based animations, providing smooth, declarative animations for page transitions, modals, and UI elements.
+
+## Framer Motion Setup
+
+### Installation
+
+Framer Motion is installed as a dependency in the project:
+
+```json package.json
+{
+  "dependencies": {
+    "framer-motion": "^11.2.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.23.1"
+  }
+}
+```
+
+### Core Import
+
+Framer Motion components are imported in animation-enabled components:
+
+```jsx
+import { motion, AnimatePresence } from 'framer-motion'
+```
+
+## Page Transitions
+
+### Route-Level Animations
+
+From `/home/daytona/workspace/source/client/src/utils/Routing.jsx:1`:
+
+```jsx
+import { Route, Routes } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
+
+const Routing = () => {
+    let location = useLocation()
+    return (
+        <AnimatePresence mode='wait'>
+            <Routes location={location} key={location.pathname}>
+                <Route path='/' element={<Home />} />
+                <Route path='/vehicles' element={<VehiclePage />} />
+                <Route path='/vehicles/:vehicleId' element={<VehicleDetails />} />
+                <Route path='/about' element={<About />} />
+                <Route path='*' element={<NotFoundPage />} />
+            </Routes>
+        </AnimatePresence>
+    )
+}
+```
+
+**Key Pattern:**
+- `AnimatePresence` with `mode='wait'` ensures exit animations complete before enter animations
+- `key={location.pathname}` triggers animation on route changes
+- Each page component wraps content in `motion.div` with transition props
+
+### Page Component Animation
+
+From `/home/daytona/workspace/source/client/src/components/Home.jsx:35`:
+
+```jsx
+return (
+    <motion.div
+        initial={{ y: "2rem", opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: "2rem", opacity: 0 }}
+        transition={{
+            duration: 0.3,
+            ease: "easeInOut"
+        }}
+        className='home'>
+        <HeroSection />
+        <Category data={vehicleCategoryData} />
+        <RentalSteps />
+    </motion.div>
+)
+```
+
+**Animation Breakdown:**
+- **initial**: Starts 2rem down and transparent
+- **animate**: Moves to normal position with full opacity
+- **exit**: Returns to 2rem down and transparent
+- **duration**: 0.3 seconds
+- **ease**: easeInOut for smooth acceleration/deceleration
+
+## Modal Animations
+
+### Two-Layer Modal Animation
+
+From `/home/daytona/workspace/source/client/src/components/ProfileModal.jsx:65`:
+
+```jsx
+return (
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{
+            duration: 0.3,
+            ease: 'easeInOut',
+        }}
+        className="profile-modal-wrapper"
+        onClick={handleBgClick}
+    >
+        <motion.div
+            initial={{ y: '2rem', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '2rem', opacity: 0 }}
+            transition={{
+                duration: 0.3,
+                ease: 'backInOut',
+            }}
+            className="profile-modal"
+        >
+            {/* Modal content */}
+        </motion.div>
+    </motion.div>
+)
+```
+
+**Pattern Explanation:**
+1. **Outer wrapper** - Fades in/out (backdrop)
+2. **Inner modal** - Slides up from below with `backInOut` easing
+3. The `backInOut` easing creates a slight "bounce" effect
+
+### AnimatePresence for Conditional Rendering
+
+From `/home/daytona/workspace/source/client/src/App.jsx:34`:
+
+```jsx
+<AnimatePresence>
+    {profileOpen && <ProfileModal closeProfileModal={closeProfileModal} />}
+</AnimatePresence>
+<AnimatePresence>
+    {isLoginSignupModal && <LoginSignupModal handleLoginSignupModal={handleLoginSignupModal} />}
+</AnimatePresence>
+```
+
+**Key Pattern:**
+- Wrap conditionally-rendered components in `AnimatePresence`
+- Enables exit animations when component unmounts
+- Each modal can have independent animation timing
+
+## Hero Section Staggered Animations
+
+### Sequential Element Entrance
+
+From `/home/daytona/workspace/source/client/src/components/HeroSection.jsx:65`:
+
+```jsx
+<motion.div
+    initial={{ opacity: 0, filter: "blur(10px)" }}
+    animate={{ opacity: 1, filter: "blur(0px)" }}
+    transition={{
+        delay: 0.2,
+        duration: 1,
+        ease: "anticipate"
+    }}
+    className="badge">
+    Trusted by 1,000+ happy riders!
+</motion.div>
+
+<motion.h1
+    initial={{ opacity: 0, filter: "blur(10px)" }}
+    animate={{ opacity: 1, filter: "blur(0px)" }}
+    transition={{
+        delay: 0.4,
+        duration: 1,
+        ease: "anticipate"
+    }}
+>Drive Your Dreams with Orion Rides</motion.h1>
+
+<motion.p
+    initial={{ opacity: 0, filter: "blur(10px)" }}
+    animate={{ opacity: 1, filter: "blur(0px)" }}
+    transition={{
+        delay: 0.6,
+        duration: 1,
+        ease: "anticipate"
+    }}
+>Experience luxury, comfort, and convenience...</motion.p>
+
+<motion.button
+    initial={{ opacity: 0, filter: "blur(10px)" }}
+    animate={{ opacity: 1, filter: "blur(0px)" }}
+    transition={{
+        delay: 0.8,
+        duration: 1,
+        ease: "anticipate"
+    }}
+    onClick={getStartedBtnHandler}>Get Started</motion.button>
+```
+
+**Stagger Pattern:**
+- Each element has incrementing delays: 0.2s, 0.4s, 0.6s, 0.8s
+- Combines opacity and blur filter for a "focus" effect
+- Uses `anticipate` easing for dynamic entrance
+- Creates a cascading animation sequence
+
+## Toast Notification Animation
+
+### Slide-In from Right
+
+From `/home/daytona/workspace/source/client/src/components/Toast.jsx:7`:
+
+```jsx
+return (
+    <motion.div
+        className={`toast ${type}`}
+        initial={{ x: "2rem", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "2rem", opacity: 0 }}
+        transition={{
+            duration: 0.3,
+            ease: "backInOut"
+        }}
+    >
+        <div className="toast-icon">
+            {type == "success" ? (
+                <i className="fa-solid fa-check"></i>
+            ) : (
+                <i className="fa-solid fa-exclamation"></i>
+            )}
+        </div>
+        {message}
+    </motion.div>
+)
+```
+
+**Animation Details:**
+- Slides in from 2rem to the right
+- Uses `backInOut` for subtle bounce
+- Exit animation mirrors entrance
+- Fixed position at bottom-right (defined in CSS)
+
+## Shared Layout Animations
+
+### Layout ID for Shared Element Transitions
+
+From `/home/daytona/workspace/source/client/src/components/VehicleCards.jsx:41`:
+
+```jsx
+filteredCars.map((car, index) => (
+    <motion.div
+        layoutId={`car-image-${car._id}`}
+        key={car._id}
+        className='vehicle'>
+        <img src={`${car.image_url}?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1`} alt={car.car_name} loading='lazy' />
+        <div className="vehicle-name">
+            <h3>{car.brand_name}</h3>
+            <h1>{car.car_name}</h1>
+        </div>
+        <div className="vehicle-actions">
+            <h3 className="price">
+                &#8377;{car.price_per_day}<span>/day</span>
+            </h3>
+            <button onClick={() => detailBtnHandler(index)}>
+                Check Details
+            </button>
+        </div>
+    </motion.div>
+))
+```
+
+**Shared Layout Pattern:**
+- `layoutId` prop creates shared element transitions
+- When navigating to details page, the image can morph smoothly
+- Must use same `layoutId` on both pages for the transition to work
+
+## Login/Signup Modal Animation
+
+From `/home/daytona/workspace/source/client/src/components/LoginSignupModal.jsx:30`:
+
+```jsx
+return (
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{
+            duration: 0.3,
+            ease: "easeInOut"
+        }}
+        className='form-wrapper' ref={formBGRef} onClick={formBGClickHandler}>
+        <motion.div
+            initial={{ y: "2rem", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "2rem", opacity: 0 }}
+            transition={{
+                duration: 0.3,
+                ease: "backInOut"
+            }}
+            className="form-container">
+            {/* Form content */}
+        </motion.div>
+    </motion.div>
+)
+```
+
+## Animation Easing Options
+
+### Available Easing Functions Used
+
+| Easing | Usage | Effect |
+|--------|-------|--------|
+| `easeInOut` | Page transitions, modal backdrops | Smooth acceleration and deceleration |
+| `backInOut` | Modals, toasts | Slight overshoot for playful effect |
+| `anticipate` | Hero section elements | Dynamic entrance with anticipation |
+
+## Common Animation Patterns
+
+### 1. Fade In/Out
+
+```jsx
+initial={{ opacity: 0 }}
+animate={{ opacity: 1 }}
+exit={{ opacity: 0 }}
+transition={{ duration: 0.3, ease: "easeInOut" }}
+```
+
+### 2. Slide Up/Down
+
+```jsx
+initial={{ y: "2rem", opacity: 0 }}
+animate={{ y: 0, opacity: 1 }}
+exit={{ y: "2rem", opacity: 0 }}
+transition={{ duration: 0.3, ease: "backInOut" }}
+```
+
+### 3. Slide Horizontal
+
+```jsx
+initial={{ x: "2rem", opacity: 0 }}
+animate={{ x: 0, opacity: 1 }}
+exit={{ x: "2rem", opacity: 0 }}
+transition={{ duration: 0.3, ease: "backInOut" }}
+```
+
+### 4. Blur Focus Effect
+
+```jsx
+initial={{ opacity: 0, filter: "blur(10px)" }}
+animate={{ opacity: 1, filter: "blur(0px)" }}
+transition={{ delay: 0.2, duration: 1, ease: "anticipate" }}
+```
+
+## Animation Best Practices
+
+### 1. Use AnimatePresence for Exit Animations
+
+```jsx
+<AnimatePresence>
+    {isVisible && <Component />}
+</AnimatePresence>
+```
+
+### 2. Set mode='wait' for Page Transitions
+
+```jsx
+<AnimatePresence mode='wait'>
+    {/* Routes */}
+</AnimatePresence>
+```
+
+Prevents overlapping page animations.
+
+### 3. Consistent Duration
+
+- **Quick interactions**: 0.2s - 0.3s (buttons, hovers)
+- **Modals/Toasts**: 0.3s
+- **Page transitions**: 0.3s
+- **Hero animations**: 1s (with stagger)
+
+### 4. Stagger Delays
+
+For sequential animations, increment delays by 0.2s:
+
+```jsx
+delay: 0.2  // First element
+delay: 0.4  // Second element
+delay: 0.6  // Third element
+delay: 0.8  // Fourth element
+```
+
+### 5. Combine with CSS Transitions
+
+Framer Motion handles component-level animations, while CSS handles:
+- Hover states
+- Active states
+- Loading skeletons
+
+From `/home/daytona/workspace/source/client/src/components/Navbar.css:64`:
+
+```css
+.nav-right a {
+    transition: all 0.2s;
+}
+
+.nav-right a:hover {
+    background-color: var(--bgGrey);
+}
+```
+
+## Performance Considerations
+
+### 1. Use transform and opacity
+
+These properties are GPU-accelerated:
+
+```jsx
+// Good - Uses transform
+initial={{ y: "2rem", opacity: 0 }}
+
+// Avoid - Uses layout properties
+initial={{ top: "2rem", opacity: 0 }}
+```
+
+### 2. Lazy Loading
+
+From `/home/daytona/workspace/source/client/src/components/VehicleCards.jsx:45`:
+
+```jsx
+<img src={`${car.image_url}?...`} alt={car.car_name} loading='lazy' />
+```
+
+Combine lazy loading with animations for better performance.
+
+### 3. Disable Body Scroll for Modals
+
+From `/home/daytona/workspace/source/client/src/components/ProfileModal.jsx:57`:
+
+```jsx
+useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+        document.body.style.overflow = 'auto';
+    };
+}, []);
+```
+
+Prevents scroll issues during modal animations.
+
+## Animation State Management
+
+### Managing Animation States
+
+From `/home/daytona/workspace/source/client/src/App.jsx:13`:
+
+```jsx
+const App = () => {
+    let [profileOpen, setProfileOpen] = useState(false)
+    
+    let openProfileModal = () => {
+        setProfileOpen(true)
+    }
+    
+    let closeProfileModal = () => {
+        setProfileOpen(false)
+    }
+    
+    return (
+        <>
+            <AnimatePresence>
+                {profileOpen && <ProfileModal closeProfileModal={closeProfileModal} />}
+            </AnimatePresence>
+        </>
+    )
+}
+```
+
+**Pattern:**
+- Use boolean state to control visibility
+- AnimatePresence handles mount/unmount animations
+- Pass close handlers to child components

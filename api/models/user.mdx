@@ -1,0 +1,52 @@
+---
+title: User
+description: User model schema and field definitions
+---
+
+The User model represents registered users in the OrionRides platform.
+
+## Schema Fields
+
+<ResponseField name="_id" type="ObjectId" required>
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  User's full name. This field is trimmed and indexed for search performance.
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  User's email address. Must be unique across the platform. This field is trimmed and indexed.
+</ResponseField>
+
+<ResponseField name="password" type="string" required>
+  Hashed password for user authentication
+</ResponseField>
+
+<ResponseField name="avatar" type="string" default="/avatars/avatar1.png">
+  URL to the user's profile avatar image
+</ResponseField>
+
+<ResponseField name="cars_rented" type="ObjectId[]">
+  Array of RentedCar references tracking all cars rented by this user
+  
+  **Reference:** RentedCar model
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Timestamp when the user account was created (auto-generated)
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Timestamp when the user account was last updated (auto-generated)
+</ResponseField>
+
+## Relationships
+
+- **cars_rented**: One-to-many relationship with RentedCar model
+- User can have multiple rental records in their history
+
+## Indexes
+
+- `name`: Indexed for efficient user search
+- `email`: Unique index for authentication and lookups

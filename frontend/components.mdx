@@ -1,0 +1,402 @@
+---
+title: 'React Components'
+description: 'Comprehensive overview of React component architecture in OrionRides'
+icon: 'cube'
+---
+
+## Component Architecture
+
+OrionRides follows a modular component structure organized in `src/components/`. Components are built using React functional components with hooks, Framer Motion for animations, and React Router for navigation.
+
+## Directory Structure
+
+```
+src/components/
+├── Navbar.jsx              # Main navigation component
+├── HeroSection.jsx         # Landing page hero section
+├── VehicleCards.jsx        # Vehicle listing cards
+├── VehicleDetails.jsx      # Individual vehicle details
+├── VehicleSearch.jsx       # Search functionality
+├── BookRide.jsx            # Booking modal
+├── LoginSignupModal.jsx    # Authentication modal
+├── ProfileModal.jsx        # User profile modal
+├── Categories.jsx          # Vehicle categories
+├── RentalSteps.jsx         # Booking process steps
+├── Toast.jsx               # Toast notifications
+├── Footer.jsx              # Footer component
+└── form/                   # Multi-step form components
+    ├── FormPage1.jsx
+    ├── FormPage2.jsx
+    ├── FormPage3.jsx
+    ├── FormPage4.jsx
+    └── BookRideResponse.jsx
+```
+
+<CardGroup cols={2}>
+  <Card title="Layout Components" icon="layout">
+    Core UI structure components like Navbar, Footer, and HeroSection that define the application layout.
+  </Card>
+  <Card title="Vehicle Components" icon="car">
+    Components for displaying and managing vehicle data including VehicleCards, VehicleDetails, and VehicleSearch.
+  </Card>
+  <Card title="Modal Components" icon="window-restore">
+    Interactive overlays like LoginSignupModal, ProfileModal, and BookRide for user interactions.
+  </Card>
+  <Card title="Form Components" icon="rectangle-list">
+    Multi-step booking form components in the form/ directory for the rental process.
+  </Card>
+</CardGroup>
+
+## Key Components
+
+### Navbar Component
+
+The main navigation component with authentication-aware rendering and responsive mobile menu.
+
+**Location:** `src/components/Navbar.jsx:27`
+
+```jsx
+const Navbar = ({ openProfileModal, handleLoginSignupModal }) => {
+    let { authToken, user, loading } = useAuth();
+    let menuRef = useRef(null);
+    let [menuOpen, setMenuOpen] = useState(false);
+
+    return (
+        <header>
+            <nav>
+                <div className="nav-left">
+                    <NavLink to="/">OrionRides.</NavLink>
+                </div>
+                <div className="nav-right">
+                    <NavLink to="/">Home</NavLink>
+                    <NavLink to="/vehicles">Vehicles</NavLink>
+                    <NavLink to="/about">About</NavLink>
+                    {authToken ? (
+                        <div className="profile-icon" onClick={openProfileModal}>
+                            <img src={getAvatarImage(user.avatar)} alt="Profile Icon" />
+                        </div>
+                    ) : (
+                        <div className="nav-right-btn">
+                            <button onClick={handleLoginSignupModal}>Sign Up</button>
+                        </div>
+                    )}
+                </div>
+                {/* Mobile menu icon */}
+            </nav>
+        </header>
+    );
+};
+```
+
+**Features:**
+- Conditional rendering based on authentication state
+- Avatar management with fallback images
+- Responsive hamburger menu for mobile devices
+- Framer Motion animations for menu transitions
+
+### VehicleCards Component
+
+Displays filterable and sortable vehicle listings with lazy loading.
+
+**Location:** `src/components/VehicleCards.jsx:6`
+
+```jsx
+const VehicleCards = ({ cars, searchInput, sortInput, setNoOfCars, isLoaded }) => {
+    let [filteredCars, setFilteredCars] = useState([]);
+
+    useEffect(() => {
+        let result = [...cars];
+
+        if (searchInput.trim() !== "") {
+            result = result.filter((car) =>
+                car.car_name.toLowerCase().includes(searchInput.trim().toLowerCase())
+            );
+        }
+
+        if (sortInput === "lowest") {
+            result.sort((a, b) => a.price_per_day - b.price_per_day);
+        } else if (sortInput === "highest") {
+            result.sort((a, b) => b.price_per_day - a.price_per_day);
+        }
+
+        setFilteredCars(result);
+        setNoOfCars(result.length);
+    }, [searchInput, sortInput, cars, setNoOfCars]);
+
+    return (
+        // Vehicle card rendering with layoutId for animations
+    );
+};
+```
+
+**Features:**
+- Real-time search filtering
+- Price-based sorting (lowest/highest/relevance)
+- Skeleton loading states
+- Framer Motion `layoutId` for shared element transitions
+- Lazy loading images with optimized URLs
+
+### BookRide Component
+
+Multi-step booking modal with form validation and API integration.
+
+**Location:** `src/components/BookRide.jsx:11`
+
+```jsx
+const BookRide = ({ closeBookRideModal, carId, getVehicleDets }) => {
+    let [formData, setFormData] = useState({
+        name: "",
+        age: "",
+        email: "",
+        phone_no: "",
+        address: "",
+        pincode: "",
+        pick_up_date: "",
+        drop_off_date: ""
+    });
+
+    let { authToken, userAuthentication } = useAuth();
+    let [pageNo, setPageNo] = useState(0);
+
+    const isFormValid = () => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^[0-9]{10}$/;
+        const pincodeRegex = /^[0-9]{6}$/;
+
+        return (
+            formData.name.trim().length > 0 &&
+            formData.age && formData.age > 0 && formData.age < 120 &&
+            emailRegex.test(formData.email) &&
+            phoneRegex.test(formData.phone_no) &&
+            pincodeRegex.test(formData.pincode) &&
+            new Date(formData.pick_up_date) <= new Date(formData.drop_off_date)
+        );
+    };
+
+    const BookRideFunction = async () => {
+        if (isFormValid()) {
+            let res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/book-ride/${carId}`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${authToken}`
+                },
+                method: "POST",
+                body: JSON.stringify(formData)
+            });
+            // Handle response...
+        }
+    };
+};
+```
+
+**Features:**
+- 4-page multi-step form (FormPage1-4)
+- Comprehensive form validation (email, phone, pincode, dates)
+- Progress bar indicator
+- Modal backdrop with click-outside-to-close
+- API integration with authentication
+- Response handling component
+
+### LoginSignupModal Component
+
+Toggleable authentication modal supporting both login and signup flows.
+
+**Location:** `src/components/LoginSignupModal.jsx:8`
+
+```jsx
+const LoginSignupModal = ({ handleLoginSignupModal }) => {
+    let [currentState, setCurrentState] = useState("Sign Up")
+    let [previousState, setPreviousState] = useState("Sign Up")
+    let [response, setResponse] = useState('');
+    let [isSuccessful, setIsSuccessful] = useState(true);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className='form-wrapper'>
+            <motion.div className="form-container">
+                {currentState === "Sign Up" ? (
+                    <Signup setCurrentState={setCurrentState} 
+                            setResponse={setResponse} 
+                            setIsSuccessful={setIsSuccessful} />
+                ) : currentState === "Login" ? (
+                    <Login setCurrentState={setCurrentState} 
+                           setResponse={setResponse} 
+                           setIsSuccessful={setIsSuccessful} />
+                ) : currentState === "Response" ? (
+                    <LoginSignupResponse response={response} 
+                                        isSuccessful={isSuccessful} />
+                ) : null}
+            </motion.div>
+        </motion.div>
+    )
+}
+```
+
+**Features:**
+- State-based UI switching (Sign Up/Login/Response)
+- Framer Motion enter/exit animations
+- Shared response component for both flows
+- Modal backdrop management
+- Body scroll lock when open
+
+### ProfileModal Component
+
+User profile management with rental history and cancellation functionality.
+
+**Location:** `src/components/ProfileModal.jsx:15`
+
+```jsx
+const ProfileModal = ({ closeProfileModal }) => {
+    let { user, logoutUser, authToken, userAuthentication, loading } = useAuth();
+    let { showToast } = useToast();
+
+    const cancelRental = async (carId) => {
+        try {
+            let res = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/api/cancel-ride/${carId}`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${authToken}`,
+                },
+                method: "POST",
+            });
+            if (res.ok) {
+                userAuthentication();
+                showToast("Rental cancelled successfully!", 'success');
+            }
+        } catch (error) {
+            showToast("Failed to cancel rental!", 'error');
+        }
+    };
+
+    return (
+        <motion.div className="profile-modal-wrapper">
+            <div className="profile-info">
+                <img src={getAvatarImage(user.avatar)} />
+                <h2>{user.name}</h2>
+                <h4>{user.email}</h4>
+            </div>
+            {/* Rental history display */}
+        </motion.div>
+    );
+};
+```
+
+**Features:**
+- User profile information display
+- Rental history with status tracking (active/expired/cancelled)
+- Cancel rental functionality
+- Toast notifications integration
+- Loading skeleton states
+- Avatar system with 6 preset avatars + fallback
+
+### HeroSection Component
+
+Animated landing page hero with background video.
+
+**Location:** `src/components/HeroSection.jsx:8`
+
+```jsx
+const HeroSection = () => {
+    let navigate = useNavigate()
+    let BGVideo = useRef(null)
+    const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 481);
+
+    useEffect(() => {
+        if (BGVideo.current) {
+            const handleLoad = () => {
+                BGVideo.current.classList.add("loaded");
+            };
+            // Video loading logic
+        }
+    }, []);
+
+    return (
+        <section className="hero-section">
+            <div className="hero-section-background">
+                <video autoPlay loop muted playsInline ref={BGVideo}>
+                    <source src={BGVidMP4} type="video/mp4" />
+                </video>
+            </div>
+            <motion.div
+                initial={{ opacity: 0, filter: "blur(10px)" }}
+                animate={{ opacity: 1, filter: "blur(0px)" }}
+                transition={{ delay: 0.2, duration: 1 }}
+                className="badge">
+                Trusted by 1,000+ happy riders!🌟
+            </motion.div>
+            <motion.h1>Drive Your Dreams with Orion Rides</motion.h1>
+            <motion.button onClick={() => navigate('/vehicles')}>Get Started</motion.button>
+        </section>
+    )
+}
+```
+
+**Features:**
+- Background video with fallback image
+- Staggered Framer Motion animations
+- Responsive text breaking
+- Video loading state management
+- Navigation integration
+
+## Component Patterns
+
+### Naming Conventions
+
+- **PascalCase** for component files and names
+- **camelCase** for functions and variables
+- Descriptive names indicating purpose (e.g., `handleLoginSignupModal`, `closeProfileModal`)
+
+### Common Patterns
+
+1. **Modal Pattern**: Background wrapper + container with click-outside-to-close
+2. **Loading States**: Skeleton loaders with matching dimensions
+3. **Animations**: Framer Motion for enter/exit and layout animations
+4. **Context Consumption**: Custom hooks from contexts (`useAuth`, `useToast`)
+5. **Form Validation**: Regex patterns with comprehensive validation functions
+
+### State Management
+
+Components use local state for UI concerns and consume global state via Context API:
+
+```jsx
+// Local state for UI
+const [menuOpen, setMenuOpen] = useState(false);
+
+// Global state via context
+const { authToken, user } = useAuth();
+const { showToast } = useToast();
+```
+
+## Animation Strategy
+
+All modal components use consistent Framer Motion patterns:
+
+```jsx
+<motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.3, ease: "easeInOut" }}
+>
+```
+
+Shared element transitions use `layoutId`:
+
+```jsx
+<motion.div layoutId={`car-image-${car._id}`}>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Routing Setup" icon="route" href="/frontend/routing">
+    Learn about React Router configuration and navigation
+  </Card>
+  <Card title="State Management" icon="database" href="/frontend/state-management">
+    Explore Context API implementation and global state
+  </Card>
+</CardGroup>

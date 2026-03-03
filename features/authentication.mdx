@@ -1,0 +1,270 @@
+---
+title: 'Authentication'
+description: 'JWT-based authentication with bcrypt password hashing'
+---
+
+## Overview
+
+OrionRides uses JWT (JSON Web Token) authentication combined with bcrypt for secure password hashing. The authentication system provides user registration, login, and protected route access.
+
+## Authentication Flow
+
+The authentication flow consists of:
+
+1. **Registration**: User creates an account with hashed password
+2. **Login**: User credentials are validated and JWT token is issued
+3. **Protected Routes**: JWT token validates user access to protected endpoints
+
+## Password Hashing with bcrypt
+
+Passwords are securely hashed using bcrypt before storing in the database. The implementation uses a salt rounds value of 10.
+
+### Registration Implementation
+
+From `server/controllers/authController.js:17-50`:
+
+```javascript
+const registerUser = async (req, res) => {
+    try {
+        let { name, email, password, avatar } = req.body;
+        let user = await User.findOne({ email: email });
+        if (user) {
+            return res.status(400).json({ message: "User already exists!" });
+        }
+
+        bcrypt.genSalt(10, function (err, salt) {
+            bcrypt.hash(password, salt, async function (err, hash) {
+                if (err) {
+                    res.send(err.message);
+                } else {
+                    let newUser = new User({
+                        name: name,
+                        email: email,
+                        password: hash,
+                        avatar: avatar,
+                    });
+                    await newUser.save();
+
+                    let token = generateToken(newUser);
+
+                    res.status(201).json({
+                        message: "User created succefully",
+                        token: token,
+                    });
+                }
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error creating user!", error: error });
+    }
+};
+```
+
+### Login Implementation
+
+From `server/controllers/authController.js:52-78`:
+
+```javascript
+const loginUser = async (req, res) => {
+    try {
+        let { email, password } = req.body;
+        let user = await User.findOne({ email: email });
+        if (!user) {
+            return res
+                .status(400)
+                .json({ message: "Incorrect email or password!" });
+        }
+
+        bcrypt.compare(password, user.password, (err, result) => {
+            if (result) {
+                let token = generateToken(user);
+                res.status(200).json({
+                    message: "Login Successful!",
+                    token: token,
+                });
+            } else {
+                res.status(400).json({
+                    message: "Incorrect email or password!",
+                });
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error creating user!", error: error });
+    }
+};
+```
+
+## JWT Token Generation
+
+Tokens are generated using the user's email and ID as payload.
+
+From `server/utils/generateToken.js:3-8`:
+
+```javascript
+let generateToken = (user) => {
+    return jwt.sign(
+        { email: user.email, id: user._id },
+        process.env.JWT_SECRET
+    );
+};
+```
+
+## Authentication Middleware
+
+The middleware verifies JWT tokens and attaches user data to requests.
+
+From `server/middlewares/authMiddleware.js:4-36`:
+
+```javascript
+const authMiddleware = async (req, res, next) => {
+    let authHeader = req.header("Authorization");
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+        return res
+            .status(401)
+            .json({ message: "Unauthorized HTTP, Token not provided!" });
+    }
+
+    try {
+        let jwtDecoded = jwt.verify(token, process.env.JWT_SECRET);
+        let user = await User.findOne({ email: jwtDecoded.email })
+            .select("-password")
+            .populate({
+                path: "cars_rented",
+                populate: { path: "car" },
+            });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found!" });
+        }
+
+        req.user = user;
+        next();
+    } catch (error) {
+        console.log("Error", error.message);
+        res.status(500).json({
+            message: "Something went wrong!",
+            error: error.message,
+        });
+    }
+};
+```
+
+## User Model Schema
+
+From `server/models/user.model.js:3-34`:
+
+```javascript
+const userSchema = mongoose.Schema(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+            index: true,
+        },
+        email: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
+            index: true,
+        },
+        password: {
+            type: String,
+            required: true,
+        },
+        avatar: {
+            type: String,
+            default: "/avatars/avatar1.png",
+        },
+        cars_rented: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "RentedCar",
+            },
+        ],
+    },
+    { timestamps: true }
+);
+```
+
+## API Endpoints
+
+### Register User
+
+```
+POST /api/register
+```
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "securepassword",
+  "avatar": "avatar1"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "User created succefully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Login User
+
+```
+POST /api/login
+```
+
+**Request Body:**
+```json
+{
+  "email": "john@example.com",
+  "password": "securepassword"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Login Successful!",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Get User
+
+```
+GET /api/user
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "_id": "...",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "avatar": "avatar1",
+  "cars_rented": []
+}
+```
+
+## Security Best Practices
+
+- Passwords are never stored in plain text
+- bcrypt salt rounds set to 10 for optimal security/performance balance
+- JWT tokens are verified on every protected route
+- User passwords are excluded from API responses using `.select("-password")`
+- Email uniqueness is enforced at the database level
+- Authorization header follows Bearer token standard

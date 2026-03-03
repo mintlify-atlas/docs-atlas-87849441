@@ -1,0 +1,225 @@
+---
+title: Setup Guide
+description: Complete guide to setting up OrionRides locally for development
+---
+
+This guide will walk you through setting up OrionRides on your local machine for development. OrionRides is a full-stack MERN application with separate client and server components.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed on your system:
+
+- **Node.js** (v16 or higher)
+- **MongoDB** (v6 or higher) - Running locally or a MongoDB Atlas account
+- **Git** - For cloning the repository
+- **npm** or **yarn** - Package manager (npm comes with Node.js)
+
+## Project Structure
+
+OrionRides consists of two main directories:
+
+```
+orionrides/
+├── client/          # React frontend (Vite)
+├── server/          # Express backend
+└── readme.md
+```
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    First, clone the OrionRides repository to your local machine:
+
+    ```bash
+    git clone <repository-url>
+    cd orionrides
+    ```
+  </Step>
+
+  <Step title="Install Server Dependencies">
+    Navigate to the server directory and install the required packages:
+
+    ```bash
+    cd server
+    npm install
+    ```
+
+    The server uses the following key dependencies:
+    - `express` - Web framework
+    - `mongoose` - MongoDB ODM
+    - `jsonwebtoken` - JWT authentication
+    - `bcrypt` - Password hashing
+    - `cors` - Cross-origin resource sharing
+    - `cookie-parser` - Parse cookies
+    - `multer` - File upload handling
+    - `dotenv` - Environment variables
+  </Step>
+
+  <Step title="Install Client Dependencies">
+    Open a new terminal, navigate to the client directory, and install packages:
+
+    ```bash
+    cd client
+    npm install
+    ```
+
+    The client uses:
+    - `react` & `react-dom` - UI library
+    - `react-router-dom` - Client-side routing
+    - `framer-motion` - Animations
+    - `vite` - Build tool and dev server
+  </Step>
+
+  <Step title="Set Up MongoDB Database">
+    You have two options for the database:
+
+    ### Option 1: Local MongoDB
+    
+    1. Install MongoDB on your system
+    2. Start the MongoDB service:
+       ```bash
+       # On macOS (using Homebrew)
+       brew services start mongodb-community
+       
+       # On Linux
+       sudo systemctl start mongod
+       
+       # On Windows
+       net start MongoDB
+       ```
+    3. Your local MongoDB will be available at `mongodb://localhost:27017`
+
+    ### Option 2: MongoDB Atlas (Cloud)
+    
+    1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+    2. Create a new cluster
+    3. Set up database access (create a database user)
+    4. Whitelist your IP address (or use 0.0.0.0/0 for development)
+    5. Get your connection string from the "Connect" button
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Create a `.env` file in the `server` directory with the following variables:
+
+    ```bash
+    # Server Configuration
+    PORT=3000
+    
+    # Database
+    DB_URL=mongodb://localhost:27017/orionrides
+    # Or for MongoDB Atlas:
+    # DB_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/orionrides
+    
+    # JWT Secret (use a strong random string)
+    JWT_SECRET=your_super_secret_jwt_key_here
+    
+    # CORS Configuration
+    CORS_ORIGIN=http://localhost:5173
+    ```
+
+    Create a `.env` file in the `client` directory:
+
+    ```bash
+    # Backend API URL
+    VITE_BACKEND_URL=http://localhost:3000
+    ```
+
+    <Warning>
+      Never commit `.env` files to version control. Make sure `.env` is listed in your `.gitignore` file.
+    </Warning>
+  </Step>
+
+  <Step title="Start the Development Servers">
+    You'll need two terminal windows/tabs:
+
+    **Terminal 1 - Start the Backend Server:**
+    ```bash
+    cd server
+    npm start
+    ```
+    
+    The server will start on `http://localhost:3000` (or your configured PORT).
+    You should see: "MongoDB Connected Successfully" and "The app is listening on port 3000"
+
+    **Terminal 2 - Start the Frontend Development Server:**
+    ```bash
+    cd client
+    npm run dev
+    ```
+    
+    The Vite dev server will start on `http://localhost:5173`.
+  </Step>
+
+  <Step title="Access the Application">
+    Open your browser and navigate to:
+    
+    ```
+    http://localhost:5173
+    ```
+    
+    You should see the OrionRides homepage. The client is configured to proxy API requests to the backend server automatically.
+  </Step>
+</Steps>
+
+## Available Scripts
+
+### Server Scripts
+
+Defined in `server/package.json`:
+
+- `npm start` - Start the production server using Node.js
+- `npm test` - Run tests (currently not configured)
+
+### Client Scripts
+
+Defined in `client/package.json`:
+
+- `npm run dev` - Start Vite development server with hot reload
+- `npm run build` - Build the production-ready client bundle
+- `npm run preview` - Preview the production build locally
+- `npm run lint` - Run ESLint to check code quality
+
+## Troubleshooting
+
+### Port Already in Use
+
+If you get an error that port 3000 or 5173 is already in use:
+
+```bash
+# Find and kill the process using the port
+# On macOS/Linux:
+lsof -ti:3000 | xargs kill -9
+lsof -ti:5173 | xargs kill -9
+
+# On Windows:
+netstat -ano | findstr :3000
+taskkill /PID <PID> /F
+```
+
+Or change the PORT in your `.env` file.
+
+### MongoDB Connection Failed
+
+If you can't connect to MongoDB:
+
+1. Verify MongoDB is running: `mongosh` (should connect successfully)
+2. Check your `DB_URL` in `.env` is correct
+3. For MongoDB Atlas, ensure your IP is whitelisted
+4. Verify username/password in connection string
+
+### CORS Errors
+
+If you see CORS errors in the browser console:
+
+1. Verify `CORS_ORIGIN` in server `.env` matches your client URL
+2. Ensure the server is running
+3. Check that the Vite proxy is configured correctly in `client/vite.config.js`
+
+## Next Steps
+
+Now that you have OrionRides running locally:
+
+- Explore the [Configuration Guide](/guides/configuration) to customize your setup
+- Learn about [Deployment](/guides/deployment) when you're ready to go live
+- Check out the [API Reference](/api/overview) to understand the backend endpoints

@@ -1,0 +1,113 @@
+---
+title: RentedCar
+description: RentedCar model schema for rental booking records
+---
+
+The RentedCar model represents active and historical car rental bookings in the OrionRides platform.
+
+## Schema Fields
+
+<ResponseField name="_id" type="ObjectId" required>
+  Unique identifier for the rental record
+</ResponseField>
+
+<ResponseField name="owner" type="ObjectId">
+  Reference to the User who made this rental booking
+  
+  **Reference:** User model
+</ResponseField>
+
+<ResponseField name="car" type="ObjectId">
+  Reference to the Car being rented
+  
+  **Reference:** Car model
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Name of the person renting the vehicle. This field is trimmed.
+</ResponseField>
+
+<ResponseField name="age" type="number" required>
+  Age of the renter (required for insurance and legal purposes)
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  Contact email for the renter. This field is trimmed.
+</ResponseField>
+
+<ResponseField name="phone_no" type="string" required>
+  Contact phone number for the renter
+</ResponseField>
+
+<ResponseField name="address" type="string" required>
+  Physical address of the renter
+</ResponseField>
+
+<ResponseField name="pincode" type="number" required>
+  Postal/ZIP code for the renter's address
+</ResponseField>
+
+<ResponseField name="total_price" type="number" required>
+  Total calculated price for the entire rental period
+</ResponseField>
+
+<ResponseField name="status" type="string" default="active">
+  Current status of the rental booking
+  
+  **Possible values:**
+  - `active`: Rental is currently active
+  - `cancelled`: Rental has been cancelled
+  - `expired`: Rental period has ended
+</ResponseField>
+
+<ResponseField name="rented_on" type="Date" default="Date.now">
+  Timestamp when the rental booking was created
+</ResponseField>
+
+<ResponseField name="pick_up_date" type="Date" required>
+  Scheduled date and time for vehicle pickup
+</ResponseField>
+
+<ResponseField name="drop_off_date" type="Date" required>
+  Scheduled date and time for vehicle return
+</ResponseField>
+
+<ResponseField name="rental_duration" type="number">
+  Duration of the rental in days (calculated from pick_up_date and drop_off_date)
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Timestamp when the rental record was created (auto-generated)
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Timestamp when the rental record was last updated (auto-generated)
+</ResponseField>
+
+## Relationships
+
+- **owner**: Many-to-one relationship with User model
+- **car**: Many-to-one relationship with Car model
+- A rental record links one user to one car for a specific time period
+
+## Status Workflow
+
+The `status` field tracks the lifecycle of a rental:
+
+1. **active**: Default status when booking is created and rental is ongoing
+2. **cancelled**: Set when user or admin cancels the booking
+3. **expired**: Set when the drop_off_date has passed
+
+## Price Calculation
+
+The `total_price` field stores the final calculated price based on:
+- Car's `price_per_day` rate
+- `rental_duration` (number of days)
+- Any applicable fees or discounts
+
+## Date Fields
+
+- **rented_on**: When the booking was made (defaults to current timestamp)
+- **pick_up_date**: When the customer will collect the vehicle (required)
+- **drop_off_date**: When the customer will return the vehicle (required)
+- **rental_duration**: Number of days between pickup and drop-off

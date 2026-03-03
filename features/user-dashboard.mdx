@@ -1,0 +1,368 @@
+---
+title: 'User Dashboard'
+description: 'User rental management and profile features'
+---
+
+## Overview
+
+The user dashboard provides a comprehensive view of rental history, active bookings, and profile management. Users can track their rentals, cancel active bookings, and manage their account.
+
+## Profile Modal Component
+
+The ProfileModal component serves as the user dashboard, displaying user information and rental management.
+
+## User Information Display
+
+From `client/src/components/ProfileModal.jsx:101-115`:
+
+```javascript
+<div className="profile-info">
+    <div className="profile-info-icon">
+        <img
+            src={getAvatarImage(user.avatar)}
+            alt="Profile Icon"
+            onError={(e) => {
+                e.target.src = avatarFallback;
+            }}
+        />
+    </div>
+    <div className="profile-info-dets">
+        <h2>{user.name}</h2>
+        <h4>{user.email}</h4>
+    </div>
+</div>
+```
+
+## Rental Management Features
+
+### Active Rentals Tracking
+
+The dashboard displays all user rentals with status indicators.
+
+From `client/src/components/ProfileModal.jsx:125-137`:
+
+```javascript
+<div className="profile-rented-cars-section">
+    <div className="profile-rented-cars-section-head">
+        {user.cars_rented.length === 0 ? (
+            <p>
+                No rentals yet!{' '}
+                <Link to="/vehicles" onClick={() => closeProfileModal()}>
+                    Explore cars now!
+                </Link>
+            </p>
+        ) : (
+            <h3>Your rentals</h3>
+        )}
+    </div>
+    {/* ... rental list */}
+</div>
+```
+
+### Rental Card Display
+
+From `client/src/components/ProfileModal.jsx:140-173`:
+
+```javascript
+{user.cars_rented.reverse().map((rentedCar, index) => (
+    <div key={index} className="rented-car">
+        <div className="rented-car-image">
+            <img
+                src={`${rentedCar.car.image_url}?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940`}
+                alt={`${rentedCar.car.car_name}`}
+            />
+        </div>
+        <div className="rented-car-text">
+            <h4>{rentedCar.car.brand_name}</h4>
+            <h3>{rentedCar.car.car_name}</h3>
+            <div className="rented-car-dates">
+                <p>
+                    {new Date(rentedCar.pick_up_date).toLocaleDateString('en-GB')}
+                </p>
+                <i className="fa-solid fa-arrow-right"></i>
+                <p>
+                    {new Date(rentedCar.drop_off_date).toLocaleDateString('en-GB')}
+                </p>
+            </div>
+            {
+                rentedCar.status == "expired" ? (
+                    <p>Rental Expired</p>
+                ) : rentedCar.status == "cancelled" ? (
+                    <p>Rental Cancelled</p>
+                ) : (
+                    <button onClick={() => cancelRental(rentedCar.car._id)}>
+                        Cancel Rental
+                    </button>
+                )
+            }
+        </div>
+    </div>
+))}
+```
+
+## Rental Status Management
+
+Rentals can have three statuses:
+
+1. **active** - Currently active rental
+2. **cancelled** - User cancelled the rental
+3. **expired** - Rental period has ended
+
+### Status Display Logic
+
+```javascript
+{
+    rentedCar.status == "expired" ? (
+        <p>Rental Expired</p>
+    ) : rentedCar.status == "cancelled" ? (
+        <p>Rental Cancelled</p>
+    ) : (
+        <button onClick={() => cancelRental(rentedCar.car._id)}>
+            Cancel Rental
+        </button>
+    )
+}
+```
+
+## Cancellation Flow
+
+### Frontend Implementation
+
+From `client/src/components/ProfileModal.jsx:38-55`:
+
+```javascript
+const cancelRental = async (carId) => {
+    try {
+        let res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/cancel-ride/${carId}`, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${authToken}`,
+            },
+            method: "POST",
+        });
+        if (res.ok) {
+            userAuthentication();
+            showToast("Rental cancelled successfully!", 'success');
+        }
+    } catch (error) {
+        console.log("Error in cancelling the rental: ", error);
+        showToast("Failed to cancel rental!", 'error');
+    }
+};
+```
+
+### Backend Cancellation Endpoint
+
+From `server/routes/index.route.js:90-131`:
+
+```javascript
+router.post("/cancel-ride/:car_id", authMiddleware, async (req, res) => {
+    try {
+        let user = req.user;
+        let { car_id } = req.params;
+
+        let car = await Car.findOneAndUpdate(
+            { _id: car_id },
+            { current_owner: null, availability: true },
+            { new: true }
+        );
+
+        if (!car) {
+            return res.status(404).json({
+                message: "Car not found!",
+            });
+        }
+
+        let rentedCar = await RentedCar.findOneAndUpdate(
+            { owner: user._id, car: car_id },
+            { status: "cancelled" },
+            { new: true }
+        );
+
+        if (!rentedCar) {
+            return res.status(404).json({
+                message: "Rental not found for this user and car!",
+            });
+        }
+
+        res.json({
+            message: "Car rental cancelled successfully!",
+            car,
+            rentedCar,
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({
+            message: "Error cancelling car rental!",
+            error: error.message,
+        });
+    }
+});
+```
+
+## User Data Population
+
+The authMiddleware automatically populates rental data when fetching user information.
+
+From `server/middlewares/authMiddleware.js:16-21`:
+
+```javascript
+let user = await User.findOne({ email: jwtDecoded.email })
+    .select("-password")
+    .populate({
+        path: "cars_rented",
+        populate: { path: "car" },
+    });
+```
+
+This provides:
+- User details (without password)
+- Array of rented cars with full car details nested
+- Complete rental information for each booking
+
+## Date Formatting
+
+Dates are displayed in a user-friendly format:
+
+```javascript
+new Date(rentedCar.pick_up_date).toLocaleDateString('en-GB')
+// Output: "15/01/2024"
+```
+
+## Avatar Management
+
+The dashboard supports multiple avatar options with fallback.
+
+From `client/src/components/ProfileModal.jsx:27-36`:
+
+```javascript
+const avatars = {
+    avatar1,
+    avatar2,
+    avatar3,
+    avatar4,
+    avatar5,
+    avatar6,
+};
+
+const getAvatarImage = (avatarName) => avatars[avatarName] || avatarFallback;
+```
+
+Available avatars:
+- avatar1 through avatar6
+- Fallback avatar for missing or invalid selections
+
+## Logout Functionality
+
+From `client/src/components/ProfileModal.jsx:116-124`:
+
+```javascript
+<button
+    onClick={() => {
+        closeProfileModal();
+        logoutUser();
+        showToast('You\'ve been logged out!', 'success');
+    }}
+>
+    Logout
+</button>
+```
+
+## Loading States
+
+The dashboard includes skeleton loaders for better UX during data fetch.
+
+From `client/src/components/ProfileModal.jsx:91-98`:
+
+```javascript
+{loading ? (
+    <div className="profile-info-loader">
+        <div className="profile-info-icon-loader"></div>
+        <div className="profile-info-dets-loader">
+            <div className="profile-info-dets-text-loader"></div>
+            <div className="profile-info-dets-text-loader"></div>
+        </div>
+    </div>
+) : (
+    // ... actual content
+)}
+```
+
+## API Endpoints
+
+### Get User Profile
+
+```
+GET /api/user
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "_id": "...",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "avatar": "avatar1",
+  "cars_rented": [
+    {
+      "_id": "...",
+      "car": {
+        "_id": "...",
+        "brand_name": "Toyota",
+        "car_name": "Camry",
+        "image_url": "..."
+      },
+      "status": "active",
+      "pick_up_date": "2024-01-15T10:00:00Z",
+      "drop_off_date": "2024-01-18T10:00:00Z",
+      "total_price": 7500,
+      "rental_duration": 3
+    }
+  ]
+}
+```
+
+### Cancel Rental
+
+```
+POST /api/cancel-ride/:car_id
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Car rental cancelled successfully!",
+  "car": { /* updated car details */ },
+  "rentedCar": {
+    "_id": "...",
+    "status": "cancelled"
+  }
+}
+```
+
+## Features Summary
+
+### Dashboard Features
+- View profile information (name, email, avatar)
+- Display all rental history (active, cancelled, expired)
+- Cancel active rentals
+- View rental dates and vehicle details
+- Direct link to explore vehicles when no rentals exist
+- Logout functionality
+
+### Data Management
+- Automatic user authentication on load
+- Real-time rental status updates
+- Toast notifications for actions
+- Optimistic UI updates after cancellation
+- Populated car details in rental records

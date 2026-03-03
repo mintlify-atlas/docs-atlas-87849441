@@ -1,0 +1,125 @@
+---
+title: Introduction
+description: Welcome to OrionRides - A modern MERN stack car rental platform
+---
+
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.svg"
+  alt="OrionRides Hero Light"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.svg"
+  alt="OrionRides Hero Dark"
+/>
+
+## Welcome to OrionRides
+
+OrionRides is a full-stack car rental web application that allows users to explore available vehicles, book cars, and manage rentals seamlessly. Built with the **MERN stack** (MongoDB, Express, React, Node.js), OrionRides provides a modern and scalable solution for car rental services.
+
+<Card title="Live Demo" icon="globe" href="https://orionrides.vercel.app">
+  Check out the live application in action
+</Card>
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get OrionRides running locally in minutes
+  </Card>
+  <Card
+    title="Features"
+    icon="star"
+    href="/features/authentication"
+  >
+    Explore the platform's capabilities
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api/overview"
+  >
+    Learn about the backend API endpoints
+  </Card>
+  <Card
+    title="Frontend"
+    icon="window"
+    href="/frontend/components"
+  >
+    Understand the React architecture
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<AccordionGroup>
+  <Accordion title="User Authentication" icon="lock">
+    Secure user signup and login with JWT-based authentication. Passwords are hashed using bcrypt, and authentication tokens are stored in HTTP-only cookies for enhanced security.
+  </Accordion>
+
+  <Accordion title="Car Listings" icon="car">
+    Browse a comprehensive catalog of vehicles available for rent. Each vehicle includes detailed information, images, pricing, and availability status.
+  </Accordion>
+
+  <Accordion title="Booking System" icon="calendar-check">
+    Rent cars for specified dates with real-time price calculations. The system validates availability and prevents double bookings automatically.
+  </Accordion>
+
+  <Accordion title="User Dashboard" icon="user">
+    Manage your rentals, view rental history, and track active bookings. Users can cancel reservations and update their profile information.
+  </Accordion>
+
+  <Accordion title="Responsive Design" icon="mobile">
+    Fully optimized for all device sizes with smooth animations powered by Framer Motion. The interface adapts seamlessly from mobile to desktop.
+  </Accordion>
+</AccordionGroup>
+
+## Technology Stack
+
+OrionRides is built with modern web technologies:
+
+<CardGroup cols={2}>
+  <Card title="Frontend" icon="react">
+    - **React 18** - UI library
+    - **Vite** - Build tool and dev server
+    - **React Router** - Client-side routing
+    - **Framer Motion** - Animations
+  </Card>
+  <Card title="Backend" icon="server">
+    - **Node.js** - JavaScript runtime
+    - **Express** - Web framework
+    - **MongoDB** - Database
+    - **Mongoose** - ODM for MongoDB
+  </Card>
+  <Card title="Authentication" icon="shield">
+    - **JWT** - Token-based auth
+    - **bcrypt** - Password hashing
+    - **cookie-parser** - Cookie handling
+  </Card>
+  <Card title="DevOps" icon="cloud">
+    - **Vercel** - Deployment platform
+    - **Git** - Version control
+    - **ESLint** - Code linting
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<Steps>
+  <Step title="Set up your development environment">
+    Follow the [Quickstart guide](/quickstart) to clone and run OrionRides locally.
+  </Step>
+  
+  <Step title="Explore the features">
+    Learn about all the platform capabilities in the [Features](/features/authentication) section.
+  </Step>
+  
+  <Step title="Integrate with the API">
+    Check out the [API Reference](/api/overview) to understand available endpoints.
+  </Step>
+</Steps>

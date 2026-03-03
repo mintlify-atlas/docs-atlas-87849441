@@ -1,0 +1,375 @@
+---
+title: Design System
+description: CSS styling approach, design patterns, and theming in OrionRides
+---
+
+OrionRides uses a modular CSS approach where each component has its own dedicated stylesheet. The design system is built on CSS custom properties (variables) for theming and follows a mobile-first responsive design philosophy.
+
+## CSS Architecture
+
+### Component-Level Styling
+
+Each component has its own `.css` file co-located with the component:
+
+```
+src/components/
+├── Navbar.jsx
+├── Navbar.css
+├── VehicleCards.jsx
+├── VehicleCards.css
+├── HeroSection.jsx
+└── HeroSection.css
+```
+
+This modular approach ensures:
+- **Scoped styles** - Each component's styles are isolated
+- **Easy maintenance** - Styles are located next to their components
+- **Better organization** - No massive CSS files
+
+### Global Styles
+
+Global styles are defined in two main files:
+
+#### `index.css` - Base Styles and Variables
+
+Located at `/home/daytona/workspace/source/client/src/index.css:1`, this file contains:
+
+```css
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
+
+:root {
+    --black: #000;
+    --white: #fff;
+    --bgGrey: #e4e4e4;
+    --grey: #b6b6b6;
+    --textGrey: #d6d6d6;
+    --textDarkGrey: #616161;
+    --orange: #ec9b03;
+    --bgBlue: #0c111d;
+    --blue: #182230;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    color: var(--black);
+}
+```
+
+#### `App.css` - Layout Borders
+
+Located at `/home/daytona/workspace/source/client/src/App.css:1`, this file defines the decorative border elements:
+
+```css
+.bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 998;
+    height: 0.75rem;
+    width: 100%;
+    background-color: var(--white);
+}
+
+.bottom-bar::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 0.75rem;
+    background-color: transparent;
+    height: 2rem;
+    width: 2rem;
+    border-radius: 50%;
+    box-shadow: -1rem 1rem var(--white);
+}
+```
+
+These create rounded corner effects using the `box-shadow` technique.
+
+## Color Scheme
+
+### Primary Colors
+
+| Variable | Value | Usage |
+|----------|-------|-------|
+| `--black` | #000 | Primary text, buttons |
+| `--white` | #fff | Backgrounds, light text |
+| `--orange` | #ec9b03 | Accent color, highlights |
+
+### Neutral Colors
+
+| Variable | Value | Usage |
+|----------|-------|-------|
+| `--bgGrey` | #e4e4e4 | Page background |
+| `--grey` | #b6b6b6 | Borders, loading states |
+| `--textGrey` | #d6d6d6 | Muted text |
+| `--textDarkGrey` | #616161 | Secondary text |
+
+### Dark Mode Colors
+
+| Variable | Value | Usage |
+|----------|-------|-------|
+| `--bgBlue` | #0c111d | Dark backgrounds |
+| `--blue` | #182230 | Dark UI elements |
+
+## Typography
+
+### Font Families
+
+Two Google Fonts are used throughout the application:
+
+- **Poppins** - Default font for body text and UI elements
+- **Montserrat** - Used for headings and branding
+
+### Font Usage Pattern
+
+From `/home/daytona/workspace/source/client/src/components/Navbar.css:42`:
+
+```css
+.nav-left a {
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.5rem;
+    font-family: "Montserrat", sans-serif;
+}
+```
+
+From `/home/daytona/workspace/source/client/src/components/HeroSection.css:56`:
+
+```css
+.hero-section .hero-section-container h1 {
+    color: var(--white);
+    font-size: 3rem;
+    font-weight: 600;
+    font-family: "Montserrat", sans-serif;
+}
+```
+
+## Responsive Design
+
+### Breakpoint Strategy
+
+The application uses a mobile-first approach with the following breakpoints:
+
+| Breakpoint | Max Width | Target Devices |
+|------------|-----------|----------------|
+| Desktop XL | 1366px | Large screens |
+| Desktop | 1024px | Standard laptops |
+| Tablet | 768px | Tablets |
+| Mobile | 480px | Phones |
+
+### Responsive Pattern Example
+
+From `/home/daytona/workspace/source/client/src/components/Navbar.css:309`:
+
+```css
+@media screen and (max-width: 1366px) {
+    header::before {
+        left: 0.5rem;
+    }
+    
+    nav {
+        padding: 1rem 4rem;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    nav {
+        padding: 0.5rem 1rem;
+    }
+    .nav-right {
+        display: none;
+    }
+    .menu-icon {
+        display: block;
+    }
+}
+```
+
+### Adaptive Layout Example
+
+From `/home/daytona/workspace/source/client/src/components/VehicleCards.css:157`:
+
+```css
+@media screen and (max-width: 768px) {
+    .vehicle-actions {
+        flex-direction: column;
+        align-items: start;
+        gap: 0.5rem;
+    }
+    
+    .vehicle-actions button {
+        font-size: 1rem;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.5rem;
+    }
+}
+```
+
+## Common CSS Patterns
+
+### Glassmorphism Effect
+
+From `/home/daytona/workspace/source/client/src/components/HeroSection.css:22`:
+
+```css
+.badge {
+    color: var(--white);
+    padding: 0.5rem 1rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: 100vw;
+}
+```
+
+### Rounded Corners with Box Shadow
+
+From `/home/daytona/workspace/source/client/src/components/Navbar.css:10`:
+
+```css
+header::before,
+header::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    z-index: -1;
+    background-color: transparent;
+    height: 2rem;
+    width: 2rem;
+    border-radius: 50%;
+}
+
+header::before {
+    left: 0.75rem;
+    box-shadow: -1rem -1rem var(--white);
+}
+
+header::after {
+    right: 0.75rem;
+    box-shadow: 1rem -1rem var(--white);
+}
+```
+
+This creates a decorative "notched" corner effect.
+
+### Loading Skeleton Animation
+
+From `/home/daytona/workspace/source/client/src/components/VehicleCards.css:13`:
+
+```css
+.vehicle-skeleton {
+    height: 450px;
+    border-radius: 1rem;
+    background-color: var(--grey);
+    animation: vehicleCardsLoad 2s ease-in-out infinite;
+}
+
+@keyframes vehicleCardsLoad {
+    0% {
+        background-color: var(--grey);
+    }
+    50% {
+        background-color: var(--textGrey);
+    }
+    100% {
+        background-color: var(--grey);
+    }
+}
+```
+
+### Hover Transitions
+
+From `/home/daytona/workspace/source/client/src/components/Navbar.css:57`:
+
+```css
+.nav-right a {
+    font-size: 1rem;
+    padding: 0.2rem 1rem;
+    border-radius: 100vw;
+    text-decoration: none;
+    color: var(--black);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.nav-right a:hover {
+    background-color: var(--bgGrey);
+}
+```
+
+### Hamburger Menu Animation
+
+From `/home/daytona/workspace/source/client/src/components/Navbar.css:131`:
+
+```css
+.hamburger::before,
+.hamburger::after {
+    content: "";
+    position: absolute;
+    height: 2px;
+    width: 100%;
+    border-radius: 100vw;
+    background-color: var(--black);
+    transition: all 0.2s;
+}
+
+.hamburger::before {
+    transform: translate(0, -4px);
+}
+
+.hamburger::after {
+    transform: translate(0, 4px);
+}
+
+.menu-active .hamburger::before {
+    transform: translate(0) rotate(45deg);
+}
+
+.menu-active .hamburger::after {
+    transform: translate(0) rotate(-45deg);
+}
+```
+
+## Design Utilities
+
+### Border Radius Convention
+
+- **Pill shapes**: `border-radius: 100vw`
+- **Rounded cards**: `border-radius: 1rem` or `0.7rem`
+- **Circular elements**: `border-radius: 50%`
+
+### Shadow Patterns
+
+```css
+/* Card shadow */
+box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+/* Subtle shadow */
+box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+
+/* Toast notification */
+box-shadow: 0px 0px 1rem rgba(0, 0, 0, 0.3);
+```
+
+### Z-Index Layering
+
+| Layer | Z-Index | Usage |
+|-------|---------|-------|
+| Toast | 1000 | Notifications |
+| Header | 999 | Navigation bar |
+| Borders | 998 | Decorative borders |
+| Menu | -2 | Mobile menu background |
+
+## Best Practices
+
+1. **Use CSS Variables** - Always reference color variables instead of hardcoded values
+2. **Mobile-First** - Write base styles for mobile, then add `@media` queries for larger screens
+3. **Component Scoping** - Keep styles in component-specific CSS files
+4. **Consistent Spacing** - Use rem units for spacing (0.5rem, 1rem, 2rem)
+5. **Semantic Class Names** - Use descriptive class names (`.vehicle-actions`, `.profile-modal`)
+6. **Smooth Transitions** - Add `transition: all 0.2s` or `0.3s` for interactive elements

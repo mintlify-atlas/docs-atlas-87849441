@@ -1,0 +1,213 @@
+---
+title: 'User Endpoints'
+description: 'Authentication and user management endpoints'
+---
+
+## Register User
+
+<api>POST /api/user/register</api>
+
+Register a new user account.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Full name of the user
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  User's email address (must be unique)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password (will be hashed before storage)
+</ParamField>
+
+<ParamField body="avatar" type="string">
+  URL to user's avatar image. Defaults to `/avatars/avatar1.png`
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  JWT authentication token
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.orionrides.com/api/user/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "securePassword123",
+    "avatar": "https://example.com/avatar.jpg"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 201 Success
+{
+  "message": "User created succefully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+```json 400 User Exists
+{
+  "message": "User already exists!"
+}
+```
+
+```json 500 Error
+{
+  "message": "Error creating user!",
+  "error": "Error details"
+}
+```
+</ResponseExample>
+
+---
+
+## Login User
+
+<api>POST /api/user/login</api>
+
+Authenticate a user and receive a JWT token.
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  JWT authentication token for subsequent requests
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.orionrides.com/api/user/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "securePassword123"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "message": "Login Successful!",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+```json 400 Invalid Credentials
+{
+  "message": "Incorrect email or password!"
+}
+```
+
+```json 500 Error
+{
+  "message": "Error creating user!",
+  "error": "Error details"
+}
+```
+</ResponseExample>
+
+---
+
+## Get Current User
+
+<api>GET /api/user</api>
+
+Retrieve the authenticated user's information.
+
+<Note>
+  This endpoint requires authentication. Include the JWT token in the Authorization header.
+</Note>
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token received from login or registration
+</ParamField>
+
+### Response
+
+<ResponseField name="_id" type="string">
+  User's unique identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  User's full name
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="avatar" type="string">
+  URL to user's avatar image
+</ResponseField>
+
+<ResponseField name="cars_rented" type="array">
+  Array of rented car IDs (ObjectId references)
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of account creation
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET https://api.orionrides.com/api/user \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "avatar": "https://example.com/avatar.jpg",
+  "cars_rented": [
+    "507f191e810c19729de860ea",
+    "507f191e810c19729de860eb"
+  ],
+  "createdAt": "2026-01-15T10:30:00.000Z",
+  "updatedAt": "2026-03-01T14:22:00.000Z"
+}
+```
+
+```json 500 Error
+{
+  "message": "Failed to retrieve user information.",
+  "error": "Error details"
+}
+```
+</ResponseExample>

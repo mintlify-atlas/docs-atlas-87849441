@@ -1,0 +1,316 @@
+---
+title: 'Vehicle Browsing'
+description: 'Vehicle listing, filtering, and search functionality'
+---
+
+## Overview
+
+OrionRides provides comprehensive vehicle browsing capabilities with real-time filtering, search, and sorting features. Users can explore the vehicle catalog and find the perfect rental car.
+
+## Vehicle Model Schema
+
+The Car model contains detailed vehicle information.
+
+From `server/models/car.model.js:3-44`:
+
+```javascript
+const carSchema = mongoose.Schema(
+    {
+        brand_name: {
+            type: String,
+            required: true,
+        },
+        car_name: {
+            type: String,
+            required: true,
+        },
+        description: {
+            type: String,
+            required: true,
+        },
+        image_url: {
+            type: String,
+            required: true,
+        },
+        price_per_day: Number,
+        car_type: {
+            type: String,
+            required: true,
+        },
+        seating_capacity: Number,
+        availability: Boolean,
+        model_year: Number,
+        customer_ratings: Number,
+        average: Number,
+        transmission: String,
+        engine: String,
+        fuel_type: String,
+        location: {
+            type: String,
+            trim: true,
+        },
+        current_owner: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
+    },
+    { timestamps: true }
+);
+```
+
+## Vehicle Listing
+
+### Backend API
+
+From `server/controllers/vehiclesController.js:3-10`:
+
+```javascript
+const listVehicles = async (req, res) => {
+    try {
+        let vehicles = await Car.find();
+        res.status(200).json(vehicles);
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+```
+
+### Get Single Vehicle
+
+From `server/controllers/vehiclesController.js:12-20`:
+
+```javascript
+const getVehicle = async (req, res) => {
+    try {
+        let { id } = req.params;
+        let vehicle = await Car.findById(id);
+        res.status(200).json(vehicle);
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+```
+
+## Frontend Implementation
+
+### Vehicle Context
+
+The VehicleContext manages vehicle data globally across the application.
+
+From `client/src/contexts/VehicleContext.jsx:5-22`:
+
+```javascript
+export const VehicleProvider = ({ children }) => {
+    const [carData, setCarData] = useState([]);
+
+    const getVehicles = async () => {
+        if (carData.length === 0) {
+            try {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/vehicles`);
+                const data = await response.json();
+                setCarData(data);
+                return data;
+            } catch (error) {
+                console.error('Error fetching cars: ', error);
+                throw error;
+            }
+        } else {
+            return carData;
+        }
+    };
+
+    return (
+        <VehicleContext.Provider value={{ carData, getVehicles }}>
+            {children}
+        </VehicleContext.Provider>
+    );
+};
+```
+
+## Search and Filter Features
+
+### Search Component
+
+From `client/src/components/VehicleSearch.jsx:3-16`:
+
+```javascript
+const VehicleSearch = ({ inputVal, handleInput }) => {
+    return (
+        <div className="vehicle-search">
+            <img src="https://images.pexels.com/photos/3972750/pexels-photo-3972750.jpeg" />
+            <h1>Search and Book the Best Rental Vehicles</h1>
+            <div className="search-input">
+                <i className="fa-solid fa-magnifying-glass"></i>
+                <input type="text" value={inputVal.search} onChange={handleInput} placeholder="Search" name='search' />
+            </div>
+        </div>
+    )
+}
+```
+
+### Vehicle Cards with Filtering
+
+From `client/src/components/VehicleCards.jsx:6-28`:
+
+```javascript
+const VehicleCards = ({ cars, searchInput, sortInput, setNoOfCars, isLoaded }) => {
+    let [filteredCars, setFilteredCars] = useState([]);
+
+    useEffect(() => {
+        let result = [...cars];
+
+        if (searchInput.trim() !== "") {
+            result = result.filter((car) =>
+                car.car_name.toLowerCase().includes(searchInput.trim().toLowerCase())
+            );
+        }
+
+        if (sortInput === "lowest") {
+            result.sort((a, b) => a.price_per_day - b.price_per_day);
+        } else if (sortInput === "highest") {
+            result.sort((a, b) => b.price_per_day - a.price_per_day);
+        } else if (sortInput === "relevance") {
+            result.sort((a, b) => a.id - b.id);
+        }
+
+        setFilteredCars(result);
+        setNoOfCars(result.length);
+    }, [searchInput, sortInput, cars, setNoOfCars]);
+    
+    // ... rest of component
+};
+```
+
+### Vehicle Card Display
+
+From `client/src/components/VehicleCards.jsx:40-58`:
+
+```javascript
+filteredCars.map((car, index) => (
+    <motion.div
+        layoutId={`car-image-${car._id}`}
+        key={car._id}
+        className='vehicle'>
+        <img src={`${car.image_url}?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1`} alt={car.car_name} loading='lazy' />
+        <div className="vehicle-name">
+            <h3>{car.brand_name}</h3>
+            <h1>{car.car_name}</h1>
+        </div>
+        <div className="vehicle-actions">
+            <h3 className="price">
+                &#8377;{car.price_per_day}<span>/day</span>
+            </h3>
+            <button onClick={() => detailBtnHandler(index)}>
+                Check Details
+            </button>
+        </div>
+    </motion.div>
+))
+```
+
+## Available Filters
+
+### Search Filter
+- **Type**: Text search
+- **Field**: `car_name`
+- **Method**: Case-insensitive string matching
+
+### Sort Options
+
+1. **Lowest Price**: Sorts vehicles by `price_per_day` ascending
+2. **Highest Price**: Sorts vehicles by `price_per_day` descending
+3. **Relevance**: Default database order
+
+### Vehicle Properties
+
+The following properties are available for filtering:
+
+- `car_type` - Vehicle category (SUV, Sedan, etc.)
+- `seating_capacity` - Number of seats
+- `availability` - Boolean indicating if vehicle is available
+- `price_per_day` - Daily rental price
+- `transmission` - Manual or Automatic
+- `fuel_type` - Fuel type (Petrol, Diesel, Electric)
+- `location` - Vehicle location
+- `model_year` - Year of manufacture
+- `customer_ratings` - User ratings
+
+## API Endpoints
+
+### List All Vehicles
+
+```
+GET /api/vehicles
+```
+
+**Response:**
+```json
+[
+  {
+    "_id": "...",
+    "brand_name": "Toyota",
+    "car_name": "Camry",
+    "description": "Reliable and comfortable sedan",
+    "image_url": "https://...",
+    "price_per_day": 2500,
+    "car_type": "Sedan",
+    "seating_capacity": 5,
+    "availability": true,
+    "model_year": 2023,
+    "transmission": "Automatic",
+    "engine": "2.5L",
+    "fuel_type": "Petrol",
+    "location": "Mumbai",
+    "customer_ratings": 4.5
+  }
+]
+```
+
+### Get Vehicle by ID
+
+```
+GET /api/vehicles/:id
+```
+
+**Response:**
+```json
+{
+  "_id": "...",
+  "brand_name": "Toyota",
+  "car_name": "Camry",
+  "description": "Reliable and comfortable sedan",
+  "price_per_day": 2500,
+  "availability": true,
+  "current_owner": null
+}
+```
+
+## Loading States
+
+The VehicleCards component includes skeleton loading states for better UX:
+
+```javascript
+{
+    isLoaded ? (
+        // Show vehicles or no results message
+    ) : (
+        // Show skeleton loaders
+        <>
+            <div className='vehicle-skeleton'></div>
+            <div className='vehicle-skeleton'></div>
+            <div className='vehicle-skeleton'></div>
+        </>
+    )
+}
+```
+
+## Navigation
+
+Users can click "Check Details" to navigate to individual vehicle pages:
+
+```javascript
+const navigate = useNavigate();
+const detailBtnHandler = (index) => {
+    navigate(`/vehicles/${filteredCars[index]._id}`);
+};
+```

@@ -1,0 +1,624 @@
+---
+title: 'State Management'
+description: 'Context API implementation and state management patterns in OrionRides'
+icon: 'database'
+---
+
+## Overview
+
+OrionRides uses **React Context API** for global state management. The application implements four specialized contexts for different concerns: authentication, toast notifications, login modal state, and vehicle data.
+
+## Context Architecture
+
+All contexts are located in `src/contexts/` and follow a consistent pattern:
+
+```
+src/contexts/
+├── AuthContext.jsx           # User authentication and profile
+├── ToastContext.jsx          # Toast notification system
+├── LoginModalContext.jsx     # Login/signup modal state
+└── VehicleContext.jsx        # Vehicle data caching
+```
+
+## Provider Hierarchy
+
+Contexts are nested in a specific order in `main.jsx` to ensure proper data flow:
+
+**Location:** `src/main.jsx:11`
+
+```jsx
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <AuthProvider>                    {/* Outermost - auth needed everywhere */}
+      <BrowserRouter>                 {/* Routing context */}
+        <ToastProvider>               {/* Toast notifications */}
+          <VehicleProvider>           {/* Vehicle data cache */}
+            <LoginModalProvider>      {/* Login modal state */}
+              <App />
+            </LoginModalProvider>
+          </VehicleProvider>
+        </ToastProvider>
+      </BrowserRouter>
+    </AuthProvider>
+  </React.StrictMode>
+)
+```
+
+<CardGroup cols={2}>
+  <Card title="AuthContext" icon="lock">
+    Manages user authentication state, token storage, and user profile data.
+  </Card>
+  <Card title="ToastContext" icon="bell">
+    Provides global toast notification system with auto-dismiss.
+  </Card>
+  <Card title="LoginModalContext" icon="right-to-bracket">
+    Controls login/signup modal visibility state across the app.
+  </Card>
+  <Card title="VehicleContext" icon="car">
+    Caches vehicle data to avoid redundant API calls.
+  </Card>
+</CardGroup>
+
+## AuthContext
+
+The most critical context, managing authentication state and user profile.
+
+**Location:** `src/contexts/AuthContext.jsx:3`
+
+### Implementation
+
+```jsx
+import React, { createContext, useState, useContext, useEffect } from 'react';
+
+const AuthContext = createContext();
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }) => {
+    const [authToken, setAuthToken] = useState(localStorage.getItem("token"));
+    let [user, setUser] = useState({})
+    let [loading, setLoading] = useState(false)
+
+    const storeTokenInLS = (token) => {
+        localStorage.setItem("token", token);
+        setAuthToken(token);
+    };
+
+    const userAuthentication = async () => {
+        if (!authToken) return
+
+        setLoading(true);
+        try {
+            let res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`
+                }
+            })
+
+            if (res.ok) {
+                let data = await res.json();
+                setUser(data)
+            } else {
+                console.error("Failed to authenticate user");
+                setUser({});
+                logoutUser();
+            }
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+            setUser({});
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        userAuthentication()
+    }, [authToken])
+
+    const logoutUser = () => {
+        localStorage.removeItem("token");
+        setAuthToken("");
+    };
+
+    return (
+        <AuthContext.Provider value={{ 
+            authToken, 
+            storeTokenInLS, 
+            logoutUser, 
+            user, 
+            userAuthentication, 
+            loading 
+        }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+```
+
+### Provided Values
+
+| Value | Type | Description |
+|-------|------|-------------|
+| `authToken` | `string` | JWT authentication token from localStorage |
+| `user` | `object` | Current user profile data (name, email, avatar, cars_rented) |
+| `loading` | `boolean` | Loading state during user authentication |
+| `storeTokenInLS()` | `function` | Store token in localStorage and state |
+| `userAuthentication()` | `function` | Fetch user data from API using current token |
+| `logoutUser()` | `function` | Clear token and reset auth state |
+
+### Usage Example
+
+**Location:** `src/components/Navbar.jsx:28`
+
+```jsx
+import { useAuth } from '../contexts/AuthContext';
+
+const Navbar = ({ openProfileModal, handleLoginSignupModal }) => {
+    let { authToken, user, loading } = useAuth();
+
+    return (
+        <nav>
+            {authToken ? (
+                <div className="profile-icon" onClick={openProfileModal}>
+                    <img src={getAvatarImage(user.avatar)} alt="Profile Icon" />
+                </div>
+            ) : (
+                <button onClick={handleLoginSignupModal}>Sign Up</button>
+            )}
+        </nav>
+    );
+};
+```
+
+### Authentication Flow
+
+1. **Initial Load**: Check localStorage for existing token
+2. **Token Found**: Automatically fetch user data via `userAuthentication()`
+3. **Login Success**: Store token with `storeTokenInLS()`, triggers auto-fetch
+4. **API Calls**: Include token in Authorization header
+5. **Logout**: Clear token with `logoutUser()`
+
+### Token Persistence
+
+Tokens are stored in localStorage for persistence across sessions:
+
+```jsx
+const [authToken, setAuthToken] = useState(localStorage.getItem("token"));
+
+const storeTokenInLS = (token) => {
+    localStorage.setItem("token", token);
+    setAuthToken(token);
+};
+```
+
+## ToastContext
+
+Provides a global notification system with automatic dismissal.
+
+**Location:** `src/contexts/ToastContext.jsx:5`
+
+### Implementation
+
+```jsx
+import React, { createContext, useState, useContext } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import Toast from '../components/Toast';
+
+const ToastContext = createContext();
+
+export const useToast = () => useContext(ToastContext);
+
+export const ToastProvider = ({ children }) => {
+    const [toast, setToast] = useState({ 
+        message: '', 
+        type: '', 
+        visible: false 
+    });
+
+    const showToast = (message, type) => {
+        setToast({ message, type, visible: true });
+
+        setTimeout(() => {
+            setToast({ message: '', type: '', visible: false });
+        }, 3000);
+    };
+
+    return (
+        <ToastContext.Provider value={{ showToast }}>
+            {children}
+            <AnimatePresence>
+                {toast.visible && <Toast message={toast.message} type={toast.type} />}
+            </AnimatePresence>
+        </ToastContext.Provider>
+    );
+};
+```
+
+### Provided Values
+
+| Value | Type | Description |
+|-------|------|-------------|
+| `showToast(message, type)` | `function` | Display toast notification for 3 seconds |
+
+**Toast Types:**
+- `'success'` - Green toast for successful operations
+- `'error'` - Red toast for errors
+
+### Usage Example
+
+**Location:** `src/components/ProfileModal.jsx:16`
+
+```jsx
+import { useToast } from '../contexts/ToastContext';
+
+const ProfileModal = ({ closeProfileModal }) => {
+    let { showToast } = useToast();
+
+    const cancelRental = async (carId) => {
+        try {
+            let res = await fetch(`/api/cancel-ride/${carId}`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${authToken}` }
+            });
+            
+            if (res.ok) {
+                showToast("Rental cancelled successfully!", 'success');
+            }
+        } catch (error) {
+            showToast("Failed to cancel rental!", 'error');
+        }
+    };
+
+    return (
+        <button onClick={() => {
+            closeProfileModal();
+            logoutUser();
+            showToast('You\'ve been logged out!', 'success');
+        }}>
+            Logout
+        </button>
+    );
+};
+```
+
+### Toast Component Integration
+
+The provider renders the Toast component directly:
+
+```jsx
+<ToastContext.Provider value={{ showToast }}>
+    {children}
+    <AnimatePresence>
+        {toast.visible && <Toast message={toast.message} type={toast.type} />}
+    </AnimatePresence>
+</ToastContext.Provider>
+```
+
+This pattern ensures toasts appear above all other content without prop drilling.
+
+## LoginModalContext
+
+Simple context for controlling login/signup modal visibility.
+
+**Location:** `src/contexts/LoginModalContext.jsx:3`
+
+### Implementation
+
+```jsx
+import { createContext, useState } from 'react'
+
+export const LoginModalContext = createContext();
+
+export const LoginModalProvider = ({ children }) => {
+    let [isLoginSignupModal, setIsLoginSignupModal] = useState(false)
+
+    const handleLoginSignupModal = () => {
+        setIsLoginSignupModal(!isLoginSignupModal)
+    }
+
+    return (
+        <LoginModalContext.Provider value={{ 
+            isLoginSignupModal, 
+            handleLoginSignupModal 
+        }}>
+            {children}
+        </LoginModalContext.Provider>
+    );
+}
+```
+
+### Provided Values
+
+| Value | Type | Description |
+|-------|------|-------------|
+| `isLoginSignupModal` | `boolean` | Whether login/signup modal is visible |
+| `handleLoginSignupModal()` | `function` | Toggle modal visibility |
+
+### Usage Example
+
+**Location:** `src/App.jsx:23`
+
+```jsx
+import { useContext } from 'react'
+import { LoginModalContext } from './contexts/LoginModalContext'
+import LoginSignupModal from './components/LoginSignupModal'
+import { AnimatePresence } from 'framer-motion'
+
+const App = () => {
+    let { isLoginSignupModal, handleLoginSignupModal } = useContext(LoginModalContext)
+
+    return (
+        <>
+            <Navbar handleLoginSignupModal={handleLoginSignupModal} />
+            <AnimatePresence>
+                {isLoginSignupModal && (
+                    <LoginSignupModal handleLoginSignupModal={handleLoginSignupModal} />
+                )}
+            </AnimatePresence>
+        </>
+    )
+}
+```
+
+## VehicleContext
+
+Caches vehicle data to minimize API calls.
+
+**Location:** `src/contexts/VehicleContext.jsx:3`
+
+### Implementation
+
+```jsx
+import { createContext, useState } from 'react';
+
+export const VehicleContext = createContext();
+
+export const VehicleProvider = ({ children }) => {
+    const [carData, setCarData] = useState([]);
+
+    const getVehicles = async () => {
+        if (carData.length === 0) {
+            try {
+                const response = await fetch(
+                    `${import.meta.env.VITE_BACKEND_URL}/api/vehicles`
+                );
+                const data = await response.json();
+                setCarData(data);
+                return data;
+            } catch (error) {
+                console.error('Error fetching cars: ', error);
+                throw error;
+            }
+        } else {
+            return carData;
+        }
+    };
+
+    return (
+        <VehicleContext.Provider value={{ carData, getVehicles }}>
+            {children}
+        </VehicleContext.Provider>
+    );
+};
+```
+
+### Provided Values
+
+| Value | Type | Description |
+|-------|------|-------------|
+| `carData` | `array` | Cached array of vehicle objects |
+| `getVehicles()` | `async function` | Fetch vehicles (from cache or API) |
+
+### Caching Strategy
+
+The context implements a simple cache-first strategy:
+
+1. **First Call**: `carData` is empty, fetch from API and store
+2. **Subsequent Calls**: Return cached `carData` without API call
+3. **Page Refresh**: Cache cleared (state reset), new fetch on next call
+
+### Usage Example
+
+```jsx
+import { useContext, useEffect, useState } from 'react'
+import { VehicleContext } from '../contexts/VehicleContext'
+
+const VehiclePage = () => {
+    const { getVehicles } = useContext(VehicleContext);
+    const [cars, setCars] = useState([]);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        const fetchCars = async () => {
+            try {
+                const data = await getVehicles();
+                setCars(data);
+                setIsLoaded(true);
+            } catch (error) {
+                console.error('Error loading vehicles:', error);
+            }
+        };
+        fetchCars();
+    }, []);
+
+    return (
+        <VehicleCards cars={cars} isLoaded={isLoaded} />
+    );
+};
+```
+
+## State Management Patterns
+
+### Custom Hook Pattern
+
+All contexts export custom hooks for cleaner consumption:
+
+```jsx
+// Context definition
+const AuthContext = createContext();
+
+// Custom hook export
+export const useAuth = () => useContext(AuthContext);
+
+// Usage in components
+import { useAuth } from '../contexts/AuthContext';
+const { authToken, user } = useAuth();
+```
+
+**Benefits:**
+- Cleaner import statements
+- Type safety in TypeScript (future enhancement)
+- Encapsulates context logic
+
+### Provider Component Pattern
+
+All contexts use the provider component pattern:
+
+```jsx
+export const AuthProvider = ({ children }) => {
+    const [state, setState] = useState(initialState);
+    
+    // Logic and functions
+    
+    return (
+        <AuthContext.Provider value={{ state, functions }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+```
+
+### Separation of Concerns
+
+Each context has a single responsibility:
+
+- **AuthContext**: Authentication only
+- **ToastContext**: Notifications only
+- **LoginModalContext**: Modal state only
+- **VehicleContext**: Vehicle data only
+
+This follows the Single Responsibility Principle and keeps contexts focused.
+
+## Local vs Global State
+
+### When to Use Context
+
+Use Context API for:
+- Authentication state (used across many components)
+- Theme/UI preferences
+- User profile data
+- Cached API data
+- Modal visibility (when controlled from multiple places)
+
+### When to Use Local State
+
+Use `useState` for:
+- Form inputs and validation
+- UI state (dropdowns, tabs, accordions)
+- Component-specific data
+- Temporary state
+
+**Example from BookRide:**
+
+```jsx
+const BookRide = () => {
+    // Local state - form specific
+    let [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        phone_no: ""
+    });
+    let [pageNo, setPageNo] = useState(0);
+    
+    // Global state - authentication
+    let { authToken, userAuthentication } = useAuth();
+    
+    // Component logic...
+};
+```
+
+## Performance Considerations
+
+### Context Re-renders
+
+Context consumers re-render when context value changes. Minimize re-renders by:
+
+1. **Splitting Contexts**: Separate frequently-changing state
+2. **Memoization**: Use `useMemo` for complex value objects
+3. **Component Structure**: Place context consumers close to usage
+
+### Optimization Example
+
+```jsx
+import { useMemo } from 'react';
+
+export const AuthProvider = ({ children }) => {
+    const [authToken, setAuthToken] = useState("");
+    const [user, setUser] = useState({});
+    
+    // Memoize context value to prevent unnecessary re-renders
+    const value = useMemo(
+        () => ({ authToken, user, storeTokenInLS, logoutUser }),
+        [authToken, user]
+    );
+    
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+```
+
+## Future Enhancements
+
+### State Management Alternatives
+
+For larger applications, consider:
+
+1. **Redux Toolkit**: More complex state with time-travel debugging
+2. **Zustand**: Simpler alternative to Redux with less boilerplate
+3. **Jotai/Recoil**: Atomic state management
+4. **TanStack Query**: Server state management with caching
+
+### Context + Reducer Pattern
+
+For complex state logic, combine Context with `useReducer`:
+
+```jsx
+import { useReducer } from 'react';
+
+const authReducer = (state, action) => {
+    switch (action.type) {
+        case 'LOGIN':
+            return { ...state, authToken: action.payload, isAuthenticated: true };
+        case 'LOGOUT':
+            return { ...state, authToken: null, isAuthenticated: false, user: {} };
+        case 'SET_USER':
+            return { ...state, user: action.payload };
+        default:
+            return state;
+    }
+};
+
+export const AuthProvider = ({ children }) => {
+    const [state, dispatch] = useReducer(authReducer, initialState);
+    
+    return (
+        <AuthContext.Provider value={{ state, dispatch }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Component Architecture" icon="cube" href="/frontend/components">
+    Learn how components consume context state
+  </Card>
+  <Card title="API Integration" icon="plug" href="/api/overview">
+    Explore backend API endpoints used by contexts
+  </Card>
+</CardGroup>

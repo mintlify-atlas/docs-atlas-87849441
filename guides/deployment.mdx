@@ -1,0 +1,393 @@
+---
+title: Deployment Guide
+description: Deploy OrionRides to production with MongoDB Atlas, Vercel, and other platforms
+---
+
+This guide covers deploying OrionRides to production. Since OrionRides is built with the MERN stack, you'll need to deploy the client and server separately.
+
+## Live Demo
+
+OrionRides is currently deployed and accessible at:
+
+**Frontend:** [https://orionrides.vercel.app](https://orionrides.vercel.app)
+
+The production deployment uses:
+- **Frontend**: Vercel (React/Vite application)
+- **Backend**: Railway/Render/Heroku (Node.js/Express API)
+- **Database**: MongoDB Atlas (cloud database)
+
+## Deployment Architecture
+
+OrionRides follows a decoupled architecture:
+
+```
+┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
+│                 │         │                  │         │                 │
+│  Vercel         │────────▶│  Railway/Render  │────────▶│  MongoDB Atlas  │
+│  (Frontend)     │   API   │  (Backend)       │   DB    │  (Database)     │
+│                 │         │                  │         │                 │
+└─────────────────┘         └──────────────────┘         └─────────────────┘
+```
+
+## Step 1: Database Setup (MongoDB Atlas)
+
+MongoDB Atlas provides a free tier perfect for deploying OrionRides.
+
+<Steps>
+  <Step title="Create MongoDB Atlas Account">
+    1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
+    2. Sign up for a free account
+    3. Verify your email address
+  </Step>
+
+  <Step title="Create a New Cluster">
+    1. Click "Build a Cluster"
+    2. Choose the **FREE** shared cluster option
+    3. Select your preferred cloud provider (AWS, Google Cloud, or Azure)
+    4. Choose a region close to your users
+    5. Name your cluster (e.g., "orionrides-cluster")
+    6. Click "Create Cluster" (takes 3-5 minutes)
+  </Step>
+
+  <Step title="Configure Database Access">
+    1. Go to **Database Access** in the left sidebar
+    2. Click "Add New Database User"
+    3. Choose **Password** authentication
+    4. Create a username and strong password
+    5. Set user privileges to "Read and write to any database"
+    6. Click "Add User"
+    
+    <Warning>
+      Save these credentials securely - you'll need them for the connection string.
+    </Warning>
+  </Step>
+
+  <Step title="Configure Network Access">
+    1. Go to **Network Access** in the left sidebar
+    2. Click "Add IP Address"
+    3. For initial testing, click "Allow Access from Anywhere" (0.0.0.0/0)
+    4. For production, add your server's specific IP addresses
+    5. Click "Confirm"
+    
+    <Info>
+      Many hosting platforms use dynamic IPs, so "Allow Access from Anywhere" is often necessary for platforms like Vercel, Railway, and Render.
+    </Info>
+  </Step>
+
+  <Step title="Get Connection String">
+    1. Go to **Database** in the left sidebar
+    2. Click "Connect" on your cluster
+    3. Choose "Connect your application"
+    4. Select **Driver**: Node.js, **Version**: 4.1 or later
+    5. Copy the connection string:
+    
+    ```
+    mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+    ```
+    
+    6. Replace `<username>` and `<password>` with your database user credentials
+    7. Add your database name: `...mongodb.net/orionrides?retryWrites=true&w=majority`
+  </Step>
+</Steps>
+
+## Step 2: Backend Deployment
+
+You can deploy the Express backend to several platforms. Here are the most popular options:
+
+### Option A: Deploy to Railway
+
+[Railway](https://railway.app) offers a generous free tier and easy deployment.
+
+<Steps>
+  <Step title="Prepare Your Repository">
+    Ensure your `server/` code is in a Git repository (GitHub, GitLab, or Bitbucket).
+  </Step>
+
+  <Step title="Create Railway Project">
+    1. Go to [railway.app](https://railway.app) and sign up
+    2. Click "New Project"
+    3. Choose "Deploy from GitHub repo"
+    4. Select your repository
+    5. Railway will auto-detect your Node.js application
+  </Step>
+
+  <Step title="Configure Root Directory">
+    Since the server code is in a subdirectory:
+    
+    1. Go to your project settings
+    2. Set **Root Directory** to `server`
+    3. Set **Start Command** to `npm start`
+  </Step>
+
+  <Step title="Add Environment Variables">
+    In the Railway dashboard, go to **Variables** and add:
+    
+    ```
+    PORT=3000
+    DB_URL=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/orionrides
+    JWT_SECRET=your_production_jwt_secret_here
+    CORS_ORIGIN=https://orionrides.vercel.app
+    ```
+    
+    <Warning>
+      Use a different, stronger JWT_SECRET than your development environment.
+    </Warning>
+  </Step>
+
+  <Step title="Deploy">
+    Railway will automatically deploy your application. Once deployed, you'll receive a URL like:
+    
+    ```
+    https://orionrides-production.up.railway.app
+    ```
+    
+    Save this URL for the frontend configuration.
+  </Step>
+</Steps>
+
+### Option B: Deploy to Render
+
+[Render](https://render.com) is another excellent option with a free tier.
+
+<Steps>
+  <Step title="Create a Web Service">
+    1. Sign up at [render.com](https://render.com)
+    2. Click "New +" → "Web Service"
+    3. Connect your Git repository
+    4. Configure the service:
+       - **Name**: orionrides-api
+       - **Root Directory**: server
+       - **Environment**: Node
+       - **Build Command**: `npm install`
+       - **Start Command**: `npm start`
+  </Step>
+
+  <Step title="Set Environment Variables">
+    Add the same environment variables as Railway in the "Environment" section.
+  </Step>
+
+  <Step title="Deploy">
+    Click "Create Web Service" and Render will deploy your backend.
+  </Step>
+</Steps>
+
+### Option C: Deploy to Heroku
+
+<Steps>
+  <Step title="Install Heroku CLI">
+    Download and install the [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli).
+  </Step>
+
+  <Step title="Login and Create App">
+    ```bash
+    heroku login
+    heroku create orionrides-api
+    ```
+  </Step>
+
+  <Step title="Configure Buildpack">
+    Since your server is in a subdirectory:
+    
+    ```bash
+    heroku buildpacks:set heroku/nodejs
+    heroku config:set PROJECT_PATH=server
+    ```
+  </Step>
+
+  <Step title="Set Environment Variables">
+    ```bash
+    heroku config:set DB_URL="mongodb+srv://..."
+    heroku config:set JWT_SECRET="your_secret"
+    heroku config:set CORS_ORIGIN="https://orionrides.vercel.app"
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    git subtree push --prefix server heroku main
+    ```
+  </Step>
+</Steps>
+
+## Step 3: Frontend Deployment (Vercel)
+
+Vercel is the recommended platform for deploying the React/Vite frontend.
+
+<Steps>
+  <Step title="Prepare the Client">
+    Ensure your `client/` code is committed to your Git repository.
+  </Step>
+
+  <Step title="Import to Vercel">
+    1. Go to [vercel.com](https://vercel.com) and sign up
+    2. Click "Add New Project"
+    3. Import your Git repository
+    4. Vercel will auto-detect the Vite framework
+  </Step>
+
+  <Step title="Configure Build Settings">
+    Set the following in Vercel:
+    
+    - **Framework Preset**: Vite
+    - **Root Directory**: `client`
+    - **Build Command**: `npm run build`
+    - **Output Directory**: `dist`
+  </Step>
+
+  <Step title="Add Environment Variable">
+    In Vercel's project settings → Environment Variables, add:
+    
+    ```
+    VITE_BACKEND_URL=https://orionrides-production.up.railway.app
+    ```
+    
+    Replace with your actual backend URL from Step 2.
+  </Step>
+
+  <Step title="Deploy">
+    Click "Deploy" and Vercel will build and deploy your frontend. You'll get a URL like:
+    
+    ```
+    https://orionrides.vercel.app
+    ```
+  </Step>
+
+  <Step title="Update Backend CORS">
+    Go back to your backend platform (Railway/Render) and update the `CORS_ORIGIN` environment variable to match your Vercel URL:
+    
+    ```
+    CORS_ORIGIN=https://orionrides.vercel.app
+    ```
+  </Step>
+</Steps>
+
+## Step 4: Alternative Frontend Deployment Options
+
+### Netlify
+
+1. Connect your repository to [Netlify](https://netlify.com)
+2. Set build settings:
+   - **Base directory**: client
+   - **Build command**: `npm run build`
+   - **Publish directory**: client/dist
+3. Add environment variable: `VITE_BACKEND_URL`
+
+### Cloudflare Pages
+
+1. Connect repository to [Cloudflare Pages](https://pages.cloudflare.com)
+2. Configure:
+   - **Framework preset**: Vite
+   - **Root directory**: client
+   - **Build command**: `npm run build`
+   - **Build output**: dist
+3. Add environment variables
+
+## Production Checklist
+
+Before going live, ensure:
+
+<Check>Database connection string is correct and tested</Check>
+<Check>JWT_SECRET is strong and different from development</Check>
+<Check>CORS_ORIGIN matches your frontend domain exactly</Check>
+<Check>MongoDB Atlas IP whitelist is configured</Check>
+<Check>All environment variables are set in both frontend and backend</Check>
+<Check>HTTPS is enabled (provided by Vercel/Railway/Render)</Check>
+<Check>Error logging is configured</Check>
+<Check>Database has proper indexes for performance</Check>
+
+## Environment Variables Summary
+
+### Backend (Railway/Render/Heroku)
+
+```bash
+PORT=3000
+DB_URL=mongodb+srv://user:pass@cluster.mongodb.net/orionrides
+JWT_SECRET=strong_random_production_secret_key
+CORS_ORIGIN=https://orionrides.vercel.app
+```
+
+### Frontend (Vercel/Netlify)
+
+```bash
+VITE_BACKEND_URL=https://orionrides-api.railway.app
+```
+
+## Monitoring and Maintenance
+
+### Database Monitoring
+
+1. Log into MongoDB Atlas
+2. Use the **Metrics** tab to monitor:
+   - Connection count
+   - Database operations
+   - Storage usage
+
+### Backend Monitoring
+
+- **Railway**: Built-in metrics and logs in dashboard
+- **Render**: Logs available in the web interface
+- **Heroku**: Use `heroku logs --tail`
+
+### Frontend Monitoring
+
+- **Vercel**: Analytics and deployment logs in dashboard
+- Set up Vercel Analytics for user insights
+
+## Troubleshooting
+
+### Cannot Connect to Database
+
+1. Verify MongoDB Atlas IP whitelist includes your server's IP
+2. Check connection string format
+3. Ensure database user has correct permissions
+4. Test connection string locally first
+
+### CORS Errors in Production
+
+1. Verify `CORS_ORIGIN` exactly matches frontend URL (including https://)
+2. Check that backend is deployed and accessible
+3. Ensure no trailing slashes in URLs
+
+### Build Failures
+
+1. Check build logs for specific errors
+2. Verify all dependencies are in `package.json`
+3. Ensure Node.js version compatibility
+4. Test build locally: `npm run build`
+
+### API Requests Failing
+
+1. Check `VITE_BACKEND_URL` is set correctly
+2. Verify backend is running and accessible
+3. Check browser console for CORS or network errors
+4. Test API endpoints directly using curl or Postman
+
+## Continuous Deployment
+
+Both Vercel and Railway support automatic deployments:
+
+1. **Push to main branch** → Automatic production deployment
+2. **Push to other branches** → Preview deployments
+3. Configure branch protections in GitHub for safety
+
+## Custom Domain (Optional)
+
+To use a custom domain:
+
+### Frontend (Vercel)
+1. Go to project settings → Domains
+2. Add your custom domain
+3. Update DNS records as instructed
+
+### Backend (Railway)
+1. Go to project settings → Domains
+2. Add custom domain
+3. Update `CORS_ORIGIN` to match new frontend domain
+
+## Next Steps
+
+- Set up [monitoring and error tracking](https://sentry.io)
+- Configure automated backups for MongoDB Atlas
+- Implement rate limiting on API endpoints
+- Add performance monitoring
+- Set up staging environment for testing

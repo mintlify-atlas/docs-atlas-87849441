@@ -1,0 +1,403 @@
+---
+title: 'Booking System'
+description: 'Rental booking workflow with date validation and price calculation'
+---
+
+## Overview
+
+The OrionRides booking system handles vehicle rentals with comprehensive date validation, price calculation, and inventory management. The system ensures vehicles cannot be double-booked and validates rental periods.
+
+## Booking Workflow
+
+1. User selects a vehicle and clicks "Book Ride"
+2. Multi-step form collects user and rental information
+3. System validates dates and calculates total price
+4. Vehicle availability is checked and updated atomically
+5. RentedCar record is created and linked to user
+6. Confirmation is sent to user
+
+## Booking Endpoint
+
+From `server/routes/index.route.js:9-88`:
+
+```javascript
+router.post("/book-ride/:car_id", authMiddleware, async (req, res) => {
+    try {
+        let user = req.user;
+        let { car_id } = req.params;
+        let {
+            name,
+            age,
+            email,
+            phone_no,
+            address,
+            pincode,
+            pick_up_date,
+            drop_off_date,
+        } = req.body;
+
+        const pickUpDate = new Date(pick_up_date);
+        const dropOffDate = new Date(drop_off_date);
+
+        if (isNaN(pickUpDate) || isNaN(dropOffDate)) {
+            return res.status(400).json({ message: "Invalid dates provided" });
+        }
+
+        if (pickUpDate < new Date() || dropOffDate <= pickUpDate) {
+            return res.status(400).json({
+                message:
+                    "Pick-up date must be in the future, and drop-off date must be after the pick-up date.",
+            });
+        }
+
+        let car = await Car.findOneAndUpdate(
+            { _id: car_id, availability: true },
+            { current_owner: user._id, availability: false },
+            { new: true }
+        );
+
+        if (!car) {
+            return res.status(404).json({
+                message: "Car not available or not found!",
+            });
+        }
+
+        const rentalDuration = Math.ceil(
+            (dropOffDate - pickUpDate) / (1000 * 60 * 60 * 24)
+        );
+        const totalPrice = rentalDuration * car.price_per_day;
+
+        let rentedCar = new RentedCar({
+            owner: user._id,
+            car: car_id,
+            name: name,
+            age: age,
+            email: email,
+            phone_no: phone_no,
+            address: address,
+            pincode: pincode,
+            status: "active",
+            total_price: totalPrice,
+            pick_up_date: pickUpDate,
+            drop_off_date: dropOffDate,
+            rental_duration: rentalDuration,
+        });
+
+        await rentedCar.save();
+
+        user.cars_rented.push(rentedCar._id);
+        await user.save();
+
+        res.json({
+            message: "Car booked successfully!",
+            car,
+            rentedCar,
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({
+            message: "Error renting car!",
+            error: error.message,
+        });
+    }
+});
+```
+
+## Date Validation
+
+The system enforces strict date validation rules:
+
+### Validation Rules
+
+1. **Date Format**: Dates must be valid Date objects
+2. **Future Dates**: Pick-up date must be in the future
+3. **Date Order**: Drop-off date must be after pick-up date
+4. **No Same-Day**: Drop-off cannot be the same as pick-up
+
+### Implementation
+
+From `server/routes/index.route.js:24-36`:
+
+```javascript
+const pickUpDate = new Date(pick_up_date);
+const dropOffDate = new Date(drop_off_date);
+
+if (isNaN(pickUpDate) || isNaN(dropOffDate)) {
+    return res.status(400).json({ message: "Invalid dates provided" });
+}
+
+if (pickUpDate < new Date() || dropOffDate <= pickUpDate) {
+    return res.status(400).json({
+        message:
+            "Pick-up date must be in the future, and drop-off date must be after the pick-up date.",
+    });
+}
+```
+
+## Price Calculation
+
+Prices are calculated based on rental duration and vehicle daily rate.
+
+### Calculation Logic
+
+From `server/routes/index.route.js:50-53`:
+
+```javascript
+const rentalDuration = Math.ceil(
+    (dropOffDate - pickUpDate) / (1000 * 60 * 60 * 24)
+);
+const totalPrice = rentalDuration * car.price_per_day;
+```
+
+**Formula:**
+- Duration = (Drop-off Date - Pick-up Date) in days (rounded up)
+- Total Price = Duration × Price Per Day
+
+**Example:**
+- Pick-up: 2024-01-15
+- Drop-off: 2024-01-18
+- Duration: 3 days
+- Price per day: ₹2500
+- Total: ₹7500
+
+## RentedCar Model
+
+From `server/models/rentedcars.model.js:3-66`:
+
+```javascript
+const rentedCarSchema = new mongoose.Schema(
+    {
+        owner: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
+        car: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Car",
+        },
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        age: {
+            type: Number,
+            required: true,
+        },
+        email: {
+            type: String,
+            required: true,
+            trim: true,
+            unique: false,
+        },
+        phone_no: {
+            type: String,
+            required: true,
+        },
+        address: {
+            type: String,
+            required: true,
+        },
+        pincode: {
+            type: Number,
+            required: true,
+        },
+        total_price: {
+            type: Number,
+            required: true,
+        },
+        status: {
+            type: String,
+            enum: ["active", "cancelled", "expired"],
+            default: "active",
+        },
+        rented_on: {
+            type: Date,
+            default: Date.now,
+        },
+        pick_up_date: {
+            type: Date,
+            required: true,
+        },
+        drop_off_date: {
+            type: Date,
+            required: true,
+        },
+        rental_duration: {
+            type: Number,
+        },
+    },
+    { timestamps: true }
+);
+```
+
+## Frontend Booking Form
+
+### Form Validation
+
+From `client/src/components/BookRide.jsx:29-46`:
+
+```javascript
+const isFormValid = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[0-9]{10}$/;
+    const pincodeRegex = /^[0-9]{6}$/;
+
+    return (
+        formData.name.trim().length > 0 &&
+        formData.age && formData.age > 0 && formData.age < 120 &&
+        formData.email.trim().length > 0 && emailRegex.test(formData.email) &&
+        formData.phone_no.trim().length > 0 && phoneRegex.test(formData.phone_no) &&
+        formData.address.trim().length > 0 &&
+        formData.pincode.trim().length > 0 && pincodeRegex.test(formData.pincode) &&
+        formData.pick_up_date.trim().length > 0 &&
+        formData.drop_off_date.trim().length > 0 &&
+        new Date(formData.pick_up_date) <= new Date(formData.drop_off_date) &&
+        new Date(formData.pick_up_date) >= new Date()
+    );
+};
+```
+
+### Booking Request
+
+From `client/src/components/BookRide.jsx:69-95`:
+
+```javascript
+const BookRideFunction = async () => {
+    if (isFormValid()) {
+        try {
+            let res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/book-ride/${carId}`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${authToken}`
+                },
+                method: "POST",
+                body: JSON.stringify(formData)
+            });
+            let data = await res.json();
+            setResponse(data.message);
+            setIsSuccessful(res.ok);
+            userAuthentication()
+            getVehicleDets()
+        } catch (error) {
+            console.log("Error renting car: ", error);
+            setResponse('Error renting car!');
+            setIsSuccessful(false);
+        }
+        setPageNo(4);
+    } else {
+        setResponse('Please ensure all fields are filled out and correctly formatted.');
+        setIsSuccessful(false);
+    }
+}
+```
+
+## Atomic Vehicle Updates
+
+The system uses MongoDB's `findOneAndUpdate` with conditions to prevent race conditions:
+
+```javascript
+let car = await Car.findOneAndUpdate(
+    { _id: car_id, availability: true },
+    { current_owner: user._id, availability: false },
+    { new: true }
+);
+```
+
+This ensures:
+- Vehicle must be available at the time of booking
+- Availability is set to `false` atomically
+- Owner is assigned in the same operation
+- Returns `null` if vehicle is unavailable
+
+## Expired Rentals
+
+The system automatically marks rentals as expired when the drop-off date passes.
+
+From `server/routes/index.route.js:133-165`:
+
+```javascript
+router.get("/cancel-expired-rentals", async (req, res) => {
+    console.log("Running a task to cancel expired rentals");
+    try {
+        const now = new Date().toISOString();
+        const expiredRentals = await RentedCar.find({
+            drop_off_date: { $lt: now },
+            status: { $ne: "expired" },
+        });
+
+        for (let rental of expiredRentals) {
+            await Car.findByIdAndUpdate(rental.car, {
+                availability: true,
+                current_owner: null,
+            });
+
+            await RentedCar.findByIdAndUpdate(rental._id, {
+                status: "expired",
+            });
+
+            console.log(`Rental ${rental._id} has been marked as expired.`);
+        }
+
+        return res.status(200).json({
+            message: "Expired rentals have been updated successfully!",
+        });
+    } catch (error) {
+        console.error("Error in canceling expired rentals:", error);
+        return res.status(500).json({
+            message: "Error cancelling expired rentals",
+            error: error.message,
+        });
+    }
+});
+```
+
+## API Endpoints
+
+### Book a Ride
+
+```
+POST /api/book-ride/:car_id
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "age": 30,
+  "email": "john@example.com",
+  "phone_no": "9876543210",
+  "address": "123 Main St, Mumbai",
+  "pincode": "400001",
+  "pick_up_date": "2024-01-15T10:00:00Z",
+  "drop_off_date": "2024-01-18T10:00:00Z"
+}
+```
+
+**Success Response:**
+```json
+{
+  "message": "Car booked successfully!",
+  "car": { /* car details */ },
+  "rentedCar": {
+    "_id": "...",
+    "owner": "...",
+    "car": "...",
+    "status": "active",
+    "total_price": 7500,
+    "rental_duration": 3
+  }
+}
+```
+
+**Error Responses:**
+
+- `400`: Invalid dates or validation error
+- `401`: Unauthorized (no token)
+- `404`: Car not available or not found
+- `500`: Server error

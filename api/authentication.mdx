@@ -1,0 +1,246 @@
+---
+title: 'Authentication'
+description: 'JWT-based authentication for the OrionRides API'
+---
+
+## Overview
+
+The OrionRides API uses **JWT (JSON Web Token)** based authentication. After registering or logging in, you receive a token that must be included in subsequent requests to protected endpoints.
+
+## Authentication Flow
+
+1. **Register** a new user or **login** with existing credentials
+2. Receive a JWT token in the response
+3. Include the token in the `Authorization` header for protected endpoints
+4. Token remains valid until server restart (no expiration implemented)
+
+## Obtaining a Token
+
+### Register New User
+
+Create a new user account and receive an authentication token:
+
+```bash
+curl -X POST http://localhost:3000/api/user/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "securepassword123",
+    "avatar": "https://example.com/avatar.jpg"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "message": "User created succefully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Login Existing User
+
+Authenticate with existing credentials:
+
+```bash
+curl -X POST http://localhost:3000/api/user/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "securepassword123"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "message": "Login Successful!",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+## Using Authentication Tokens
+
+### Authorization Header Format
+
+Include the JWT token in the `Authorization` header using the Bearer scheme:
+
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+### Example Authenticated Request
+
+```bash
+curl -X GET http://localhost:3000/api/user \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Booking a Ride (Protected Endpoint)
+
+```bash
+curl -X POST http://localhost:3000/api/book-ride/507f1f77bcf86cd799439011 \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "age": 30,
+    "email": "john@example.com",
+    "phone_no": "+1234567890",
+    "address": "123 Main St",
+    "pincode": "12345",
+    "pick_up_date": "2026-03-15",
+    "drop_off_date": "2026-03-20"
+  }'
+```
+
+## Token Generation
+
+Tokens are generated using the `generateToken` utility function from `utils/generateToken.js:3-8`:
+
+```javascript
+import jwt from "jsonwebtoken";
+
+let generateToken = (user) => {
+    return jwt.sign(
+        { email: user.email, id: user._id },
+        process.env.JWT_SECRET
+    );
+};
+```
+
+The token payload contains:
+- `email` - User's email address
+- `id` - User's unique identifier
+
+## Token Verification
+
+Protected endpoints use the `authMiddleware` to verify tokens. The middleware (`middlewares/authMiddleware.js:4-36`):
+
+1. Extracts the token from the `Authorization` header
+2. Verifies the token using `JWT_SECRET`
+3. Retrieves the user from the database
+4. Attaches the user object to `req.user`
+
+```javascript
+const authMiddleware = async (req, res, next) => {
+    let authHeader = req.header("Authorization");
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+        return res
+            .status(401)
+            .json({ message: "Unauthorized HTTP, Token not provided!" });
+    }
+
+    try {
+        let jwtDecoded = jwt.verify(token, process.env.JWT_SECRET);
+        let user = await User.findOne({ email: jwtDecoded.email })
+            .select("-password")
+            .populate({
+                path: "cars_rented",
+                populate: { path: "car" },
+            });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found!" });
+        }
+
+        req.user = user;
+        next();
+    } catch (error) {
+        res.status(500).json({
+            message: "Something went wrong!",
+            error: error.message,
+        });
+    }
+};
+```
+
+## Token Expiration
+
+**Important:** The current implementation does not set an expiration time for tokens. Tokens remain valid indefinitely until:
+
+- The server is restarted (if JWT_SECRET changes)
+- The user is deleted from the database
+- Manual token revocation is implemented
+
+<Warning>
+  In production, you should implement token expiration and refresh token mechanisms for enhanced security.
+</Warning>
+
+## Protected Endpoints
+
+The following endpoints require authentication:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/user` | Get current user profile |
+| `POST` | `/api/book-ride/:car_id` | Book a vehicle |
+| `POST` | `/api/cancel-ride/:car_id` | Cancel a booking |
+
+## Error Responses
+
+### Missing Token
+
+```json
+{
+  "message": "Unauthorized HTTP, Token not provided!"
+}
+```
+
+**Status Code:** `401`
+
+### Invalid Token
+
+```json
+{
+  "message": "Something went wrong!",
+  "error": "jwt malformed"
+}
+```
+
+**Status Code:** `500`
+
+### User Not Found
+
+```json
+{
+  "message": "User not found!"
+}
+```
+
+**Status Code:** `404`
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Store tokens securely">
+    Never store JWT tokens in localStorage. Use httpOnly cookies or secure session storage in production applications.
+  </Accordion>
+  
+  <Accordion title="Use HTTPS in production">
+    Always transmit tokens over HTTPS to prevent interception.
+  </Accordion>
+  
+  <Accordion title="Keep JWT_SECRET private">
+    The `JWT_SECRET` environment variable must be kept confidential and never committed to version control.
+  </Accordion>
+  
+  <Accordion title="Implement token expiration">
+    Add token expiration and refresh token mechanisms for production use.
+  </Accordion>
+</AccordionGroup>
+
+## Environment Variables
+
+Authentication requires the following environment variable:
+
+```bash
+JWT_SECRET=your-secret-key-here
+```
+
+This secret is used to sign and verify JWT tokens. Use a strong, randomly generated value in production.

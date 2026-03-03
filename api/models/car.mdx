@@ -1,0 +1,103 @@
+---
+title: Car
+description: Car model schema and vehicle property definitions
+---
+
+The Car model represents vehicles available for rent in the OrionRides platform.
+
+## Schema Fields
+
+<ResponseField name="_id" type="ObjectId" required>
+  Unique identifier for the car
+</ResponseField>
+
+<ResponseField name="brand_name" type="string" required>
+  Brand or manufacturer of the vehicle (e.g., Toyota, Honda, Ford)
+</ResponseField>
+
+<ResponseField name="car_name" type="string" required>
+  Model name of the vehicle (e.g., Camry, Civic, Mustang)
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Detailed description of the vehicle including features and specifications
+</ResponseField>
+
+<ResponseField name="image_url" type="string" required>
+  URL to the primary image of the vehicle
+</ResponseField>
+
+<ResponseField name="price_per_day" type="number">
+  Daily rental rate for the vehicle in the platform's currency
+</ResponseField>
+
+<ResponseField name="car_type" type="string" required>
+  Category of the vehicle (e.g., SUV, Sedan, Coupe, Hatchback)
+</ResponseField>
+
+<ResponseField name="seating_capacity" type="number">
+  Maximum number of passengers the vehicle can accommodate
+</ResponseField>
+
+<ResponseField name="availability" type="boolean">
+  Current availability status of the vehicle for rental
+  
+  - `true`: Available for booking
+  - `false`: Currently rented or unavailable
+</ResponseField>
+
+<ResponseField name="model_year" type="number">
+  Manufacturing year of the vehicle
+</ResponseField>
+
+<ResponseField name="customer_ratings" type="number">
+  Number of customer ratings received
+</ResponseField>
+
+<ResponseField name="average" type="number">
+  Average rating score from customer reviews
+</ResponseField>
+
+<ResponseField name="transmission" type="string">
+  Transmission type (e.g., Automatic, Manual)
+</ResponseField>
+
+<ResponseField name="engine" type="string">
+  Engine specifications (e.g., 2.0L I4, 3.5L V6)
+</ResponseField>
+
+<ResponseField name="fuel_type" type="string">
+  Type of fuel used by the vehicle (e.g., Gasoline, Diesel, Electric, Hybrid)
+</ResponseField>
+
+<ResponseField name="location" type="string">
+  Current location or pickup location for the vehicle. This field is trimmed.
+</ResponseField>
+
+<ResponseField name="current_owner" type="ObjectId">
+  Reference to the User who is currently renting this vehicle
+  
+  **Reference:** User model
+  
+  - `null` when vehicle is available
+  - Set to User ID when vehicle is rented
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Timestamp when the car was added to the platform (auto-generated)
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Timestamp when the car information was last updated (auto-generated)
+</ResponseField>
+
+## Relationships
+
+- **current_owner**: Many-to-one relationship with User model
+- A car can have at most one current owner (the user currently renting it)
+
+## Availability Tracking
+
+The `availability` and `current_owner` fields work together to track rental status:
+- When a car is rented, `availability` is set to `false` and `current_owner` is set to the renting user's ID
+- When a rental ends, `availability` is set to `true` and `current_owner` is cleared

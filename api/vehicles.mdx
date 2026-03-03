@@ -1,0 +1,207 @@
+---
+title: 'Vehicle Endpoints'
+description: 'Browse and search available vehicles'
+---
+
+## List All Vehicles
+
+<api>GET /api/vehicles</api>
+
+Retrieve a list of all vehicles in the system.
+
+### Response
+
+Returns an array of vehicle objects.
+
+<ResponseField name="_id" type="string">
+  Unique vehicle identifier
+</ResponseField>
+
+<ResponseField name="brand_name" type="string">
+  Vehicle brand (e.g., "Toyota", "Honda")
+</ResponseField>
+
+<ResponseField name="car_name" type="string">
+  Model name of the vehicle
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Detailed description of the vehicle
+</ResponseField>
+
+<ResponseField name="image_url" type="string">
+  URL to vehicle image
+</ResponseField>
+
+<ResponseField name="price_per_day" type="number">
+  Daily rental price in the default currency
+</ResponseField>
+
+<ResponseField name="car_type" type="string">
+  Type of vehicle (e.g., "SUV", "Sedan", "Hatchback")
+</ResponseField>
+
+<ResponseField name="seating_capacity" type="number">
+  Number of passengers the vehicle can seat
+</ResponseField>
+
+<ResponseField name="availability" type="boolean">
+  Whether the vehicle is currently available for rent
+</ResponseField>
+
+<ResponseField name="model_year" type="number">
+  Year the vehicle was manufactured
+</ResponseField>
+
+<ResponseField name="customer_ratings" type="number">
+  Customer rating score
+</ResponseField>
+
+<ResponseField name="average" type="number">
+  Average rating
+</ResponseField>
+
+<ResponseField name="transmission" type="string">
+  Transmission type (e.g., "Automatic", "Manual")
+</ResponseField>
+
+<ResponseField name="engine" type="string">
+  Engine specifications
+</ResponseField>
+
+<ResponseField name="fuel_type" type="string">
+  Type of fuel (e.g., "Petrol", "Diesel", "Electric")
+</ResponseField>
+
+<ResponseField name="location" type="string">
+  Current location of the vehicle
+</ResponseField>
+
+<ResponseField name="current_owner" type="string">
+  User ID of current renter (null if available)
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when vehicle was added
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET https://api.orionrides.com/api/vehicles
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+[
+  {
+    "_id": "507f191e810c19729de860ea",
+    "brand_name": "Toyota",
+    "car_name": "Camry",
+    "description": "A comfortable and reliable sedan perfect for city and highway driving",
+    "image_url": "https://example.com/cars/camry.jpg",
+    "price_per_day": 75,
+    "car_type": "Sedan",
+    "seating_capacity": 5,
+    "availability": true,
+    "model_year": 2024,
+    "customer_ratings": 4.5,
+    "average": 4.5,
+    "transmission": "Automatic",
+    "engine": "2.5L 4-Cylinder",
+    "fuel_type": "Petrol",
+    "location": "New York",
+    "current_owner": null,
+    "createdAt": "2026-01-10T08:00:00.000Z",
+    "updatedAt": "2026-03-01T12:00:00.000Z"
+  },
+  {
+    "_id": "507f191e810c19729de860eb",
+    "brand_name": "Honda",
+    "car_name": "CR-V",
+    "description": "Spacious SUV with excellent fuel economy",
+    "image_url": "https://example.com/cars/crv.jpg",
+    "price_per_day": 95,
+    "car_type": "SUV",
+    "seating_capacity": 7,
+    "availability": false,
+    "model_year": 2025,
+    "customer_ratings": 4.7,
+    "average": 4.7,
+    "transmission": "Automatic",
+    "engine": "1.5L Turbo",
+    "fuel_type": "Petrol",
+    "location": "Los Angeles",
+    "current_owner": "507f1f77bcf86cd799439011",
+    "createdAt": "2026-01-12T10:30:00.000Z",
+    "updatedAt": "2026-02-28T16:45:00.000Z"
+  }
+]
+```
+
+```json 500 Error
+{
+  "message": "Internal server error"
+}
+```
+</ResponseExample>
+
+---
+
+## Get Vehicle by ID
+
+<api>GET /api/vehicles/:id</api>
+
+Retrieve detailed information about a specific vehicle.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the vehicle (MongoDB ObjectId)
+</ParamField>
+
+### Response
+
+Returns a single vehicle object with the same structure as the list endpoint.
+
+<RequestExample>
+```bash cURL
+curl -X GET https://api.orionrides.com/api/vehicles/507f191e810c19729de860ea
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "_id": "507f191e810c19729de860ea",
+  "brand_name": "Toyota",
+  "car_name": "Camry",
+  "description": "A comfortable and reliable sedan perfect for city and highway driving",
+  "image_url": "https://example.com/cars/camry.jpg",
+  "price_per_day": 75,
+  "car_type": "Sedan",
+  "seating_capacity": 5,
+  "availability": true,
+  "model_year": 2024,
+  "customer_ratings": 4.5,
+  "average": 4.5,
+  "transmission": "Automatic",
+  "engine": "2.5L 4-Cylinder",
+  "fuel_type": "Petrol",
+  "location": "New York",
+  "current_owner": null,
+  "createdAt": "2026-01-10T08:00:00.000Z",
+  "updatedAt": "2026-03-01T12:00:00.000Z"
+}
+```
+
+```json 500 Error
+{
+  "message": "Internal server error"
+}
+```
+</ResponseExample>

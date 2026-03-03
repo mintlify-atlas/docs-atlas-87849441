@@ -1,0 +1,270 @@
+---
+title: Configuration
+description: Complete environment configuration guide for OrionRides client and server
+---
+
+OrionRides requires proper configuration of environment variables for both the client and server applications. This guide covers all configuration options available.
+
+## Server Configuration
+
+The server requires a `.env` file in the `server/` directory. Create this file and configure the following variables:
+
+### Required Environment Variables
+
+<ParamField path="PORT" type="number" default="3000">
+  The port number on which the Express server will listen for incoming requests.
+  
+  ```bash
+  PORT=3000
+  ```
+  
+  The server will fall back to port 3000 if not specified. You can use any available port, but ensure it doesn't conflict with other services.
+</ParamField>
+
+<ParamField path="DB_URL" type="string" required>
+  MongoDB connection string for your database. This is the most critical configuration.
+  
+  **For Local MongoDB:**
+  ```bash
+  DB_URL=mongodb://localhost:27017/orionrides
+  ```
+  
+  **For MongoDB Atlas:**
+  ```bash
+  DB_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/orionrides?retryWrites=true&w=majority
+  ```
+  
+  Replace `<username>` and `<password>` with your MongoDB Atlas credentials.
+  
+  <Warning>
+    Never commit your database credentials to version control. Always use environment variables.
+  </Warning>
+</ParamField>
+
+<ParamField path="JWT_SECRET" type="string" required>
+  Secret key used to sign and verify JSON Web Tokens for user authentication.
+  
+  ```bash
+  JWT_SECRET=your_super_secret_random_string_here
+  ```
+  
+  **Security Best Practices:**
+  - Use a long, random string (minimum 32 characters)
+  - Never reuse secrets across environments
+  - Generate using: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+  
+  This secret is used in:
+  - `server/utils/generateToken.js:6` - Token generation
+  - `server/middlewares/authMiddleware.js:15` - Token verification
+</ParamField>
+
+<ParamField path="CORS_ORIGIN" type="string" required>
+  The allowed origin for Cross-Origin Resource Sharing (CORS). This should be your frontend application URL.
+  
+  **Development:**
+  ```bash
+  CORS_ORIGIN=http://localhost:5173
+  ```
+  
+  **Production:**
+  ```bash
+  CORS_ORIGIN=https://orionrides.vercel.app
+  ```
+  
+  The CORS middleware is configured in `server/app.js:13` and allows credentials and specific HTTP methods (GET, POST, PUT, DELETE, PATCH, HEAD).
+  
+  <Info>
+    If you're running the Vite dev server on a different port, update this value accordingly.
+  </Info>
+</ParamField>
+
+## Client Configuration
+
+The client requires a `.env` file in the `client/` directory for Vite-specific environment variables.
+
+### Required Environment Variables
+
+<ParamField path="VITE_BACKEND_URL" type="string" required>
+  The URL of your backend API server. Vite requires all environment variables to be prefixed with `VITE_` to be exposed to the client.
+  
+  **Development:**
+  ```bash
+  VITE_BACKEND_URL=http://localhost:3000
+  ```
+  
+  **Production:**
+  ```bash
+  VITE_BACKEND_URL=https://your-api-server.com
+  ```
+  
+  This variable is used in the Vite proxy configuration (`client/vite.config.js:9`) to route `/api` requests to the backend server during development.
+</ParamField>
+
+## Complete Configuration Examples
+
+### Development Environment
+
+**server/.env:**
+```bash
+# Server Port
+PORT=3000
+
+# Database Connection
+DB_URL=mongodb://localhost:27017/orionrides
+
+# JWT Secret (generate a secure random string)
+JWT_SECRET=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173
+```
+
+**client/.env:**
+```bash
+# Backend API URL
+VITE_BACKEND_URL=http://localhost:3000
+```
+
+### Production Environment
+
+**server/.env:**
+```bash
+# Server Port (often provided by hosting platform)
+PORT=3000
+
+# MongoDB Atlas Connection
+DB_URL=mongodb+srv://orionrides:SecurePassword123@cluster0.abc123.mongodb.net/orionrides?retryWrites=true&w=majority
+
+# JWT Secret (use a different secret than development)
+JWT_SECRET=production_secret_key_very_long_and_random_string_here
+
+# CORS Configuration (your frontend domain)
+CORS_ORIGIN=https://orionrides.vercel.app
+```
+
+**client/.env:**
+```bash
+# Production Backend API URL
+VITE_BACKEND_URL=https://orionrides-api.railway.app
+```
+
+## Configuration Files
+
+### Server Configuration
+
+The server configuration is loaded in `server/index.js:5` using `dotenv.config()`:
+
+```javascript
+import dotenv from "dotenv";
+dotenv.config();
+```
+
+This loads all variables from the `.env` file into `process.env`.
+
+### Database Connection
+
+The MongoDB connection is established in `server/config/connectDB.js:5`:
+
+```javascript
+await mongoose.connect(`${process.env.DB_URL}`);
+```
+
+### CORS Setup
+
+CORS is configured in `server/app.js` with specific settings:
+
+```javascript
+app.use(
+  cors({
+    origin: [process.env.CORS_ORIGIN],
+    methods: ["GET, POST, PUT, DELETE, PATCH, HEAD"],
+    credentials: true,
+  })
+);
+```
+
+### Vite Proxy Configuration
+
+The client uses Vite's proxy feature to avoid CORS issues in development (`client/vite.config.js`):
+
+```javascript
+server: {
+  proxy: {
+    "/api": {
+      target: process.env.VITE_BACKEND_URL,
+      changeOrigin: true,
+    },
+  },
+}
+```
+
+This routes all `/api/*` requests to your backend server.
+
+## Security Considerations
+
+<Warning>
+  **Never commit sensitive environment variables to version control!**
+</Warning>
+
+### Best Practices
+
+1. **Use `.gitignore`**: Ensure `.env` files are excluded from git:
+   ```
+   .env
+   .env.local
+   .env.production
+   ```
+
+2. **Different Secrets per Environment**: Use completely different JWT secrets for development, staging, and production.
+
+3. **Rotate Secrets Regularly**: Change your JWT secret periodically, especially if you suspect it may have been compromised.
+
+4. **Strong Passwords**: Use strong, unique passwords for your MongoDB database.
+
+5. **IP Whitelisting**: For MongoDB Atlas, whitelist only necessary IP addresses instead of allowing all IPs (0.0.0.0/0).
+
+6. **Environment-Specific Files**: Consider using:
+   - `.env.development`
+   - `.env.production`
+   - `.env.test`
+
+## Environment Variable Validation
+
+Consider adding validation to ensure all required environment variables are present:
+
+```javascript
+const requiredEnvVars = ['DB_URL', 'JWT_SECRET', 'CORS_ORIGIN'];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error(`Missing required environment variable: ${envVar}`);
+  }
+}
+```
+
+## Troubleshooting
+
+### Variables Not Loading
+
+If environment variables aren't being recognized:
+
+1. Verify `.env` file is in the correct directory (`server/` or `client/`)
+2. Check file is named exactly `.env` (not `.env.txt`)
+3. Ensure no spaces around `=` sign: `PORT=3000` not `PORT = 3000`
+4. Restart your development server after changing `.env` files
+5. For Vite variables, ensure they're prefixed with `VITE_`
+
+### CORS Issues
+
+If you're experiencing CORS errors:
+
+1. Verify `CORS_ORIGIN` matches your client URL exactly (including port)
+2. Check that the server is running and accessible
+3. Ensure credentials are being sent if required
+4. In production, verify your frontend domain is correctly configured
+
+## Next Steps
+
+- Review the [Setup Guide](/guides/setup) for initial installation
+- Learn about [Deployment](/guides/deployment) to configure production environments
+- Explore the [API Reference](/api/overview) to understand available endpoints

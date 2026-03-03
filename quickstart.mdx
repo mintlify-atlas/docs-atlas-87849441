@@ -1,80 +1,287 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get OrionRides running locally in minutes
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
+Before you begin, ensure you have the following installed:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Node.js" icon="node-js">
+    Version 16 or higher
+  </Card>
+  <Card title="MongoDB" icon="database">
+    Local instance or MongoDB Atlas account
+  </Card>
+  <Card title="npm or yarn" icon="box">
+    Package manager
+  </Card>
+  <Card title="Git" icon="git">
+    Version control system
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the OrionRides repository to your local machine:
+
+    ```bash
+    git clone https://github.com/yourusername/orionrides.git
+    cd orionrides
+    ```
+
+    The project contains two main directories:
+    - `client/` - React frontend application
+    - `server/` - Express backend API
+  </Step>
+
+  <Step title="Set up the server">
+    Navigate to the server directory and install dependencies:
+
+    <CodeGroup>
+    ```bash npm
+    cd server
+    npm install
+    ```
+
+    ```bash yarn
+    cd server
+    yarn install
+    ```
+    </CodeGroup>
+
+    Create a `.env` file in the `server/` directory with the following variables:
+
+    ```bash .env
+    # Server Configuration
+    PORT=3000
+
+    # Database
+    DB_URL=mongodb://localhost:27017/orionrides
+    # Or use MongoDB Atlas:
+    # DB_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/orionrides
+
+    # CORS
+    CORS_ORIGIN=http://localhost:5173
+
+    # JWT Secret
+    JWT_SECRET=your_jwt_secret_key_here
+    ```
+
+    <Note>
+      Replace `your_jwt_secret_key_here` with a secure random string for production use.
+    </Note>
+  </Step>
+
+  <Step title="Set up the client">
+    In a new terminal, navigate to the client directory and install dependencies:
+
+    <CodeGroup>
+    ```bash npm
+    cd client
+    npm install
+    ```
+
+    ```bash yarn
+    cd client
+    yarn install
+    ```
+    </CodeGroup>
+
+    Create a `.env` file in the `client/` directory:
+
+    ```bash .env
+    # Backend API URL
+    VITE_BACKEND_URL=http://localhost:3000
+    ```
+
+    <Info>
+      The Vite dev server uses this URL for API proxy configuration in `vite.config.js`.
+    </Info>
+  </Step>
+
+  <Step title="Start the development servers">
+    You'll need two terminal windows - one for the server and one for the client.
+
+    **Terminal 1 - Start the server:**
+
+    <CodeGroup>
+    ```bash npm
+    cd server
+    npm start
+    ```
+
+    ```bash yarn
+    cd server
+    yarn start
+    ```
+    </CodeGroup>
+
+    You should see:
+    ```
+    MongoDB Connected Successfully
+    The app is listening on port 3000
+    ```
+
+    **Terminal 2 - Start the client:**
+
+    <CodeGroup>
+    ```bash npm
+    cd client
+    npm run dev
+    ```
+
+    ```bash yarn
+    cd client
+    yarn dev
+    ```
+    </CodeGroup>
+
+    The Vite dev server will start at `http://localhost:5173`
+  </Step>
+
+  <Step title="Verify the installation">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:5173
+    ```
+
+    You should see the OrionRides homepage. Try the following:
+
+    <Tabs>
+      <Tab title="Create an account">
+        1. Click on the login/signup button
+        2. Register with your email and password
+        3. Verify you're redirected to the home page after signup
+      </Tab>
+      
+      <Tab title="Browse vehicles">
+        1. Navigate to the vehicles page
+        2. Browse available cars
+        3. Click on a vehicle to view details
+      </Tab>
+      
+      <Tab title="Test the API">
+        Use curl or Postman to test the API endpoints:
+
+        ```bash
+        # Get all vehicles
+        curl http://localhost:3000/api/vehicles
+
+        # Health check
+        curl http://localhost:3000/api
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Project Structure
+
+Here's an overview of the OrionRides project structure:
+
+```
+orionrides/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/    # React components
+│   │   ├── contexts/      # React context providers
+│   │   ├── utils/         # Utility functions
+│   │   ├── App.jsx        # Main app component
+│   │   └── main.jsx       # Entry point
+│   ├── public/            # Static assets
+│   ├── package.json
+│   └── vite.config.js     # Vite configuration
+│
+├── server/                # Express backend
+│   ├── config/           # Database configuration
+│   ├── controllers/      # Route controllers
+│   ├── middlewares/      # Express middlewares
+│   ├── models/           # Mongoose models
+│   │   ├── user.model.js
+│   │   ├── car.model.js
+│   │   └── rentedcars.model.js
+│   ├── routes/           # API routes
+│   │   ├── user.route.js
+│   │   ├── vehicle.route.js
+│   │   └── index.route.js
+│   ├── utils/            # Utility functions
+│   ├── app.js            # Express app setup
+│   ├── index.js          # Server entry point
+│   └── package.json
+│
+└── README.md
+```
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="MongoDB connection error">
+    **Error:** `MongoDB connection failed`
+
+    **Solutions:**
+    - Verify MongoDB is running locally: `mongod --version`
+    - Check your `DB_URL` in the server `.env` file
+    - If using MongoDB Atlas, ensure your IP is whitelisted
+    - Verify database credentials are correct
+  </Accordion>
+
+  <Accordion title="CORS errors">
+    **Error:** `CORS policy: No 'Access-Control-Allow-Origin' header`
+
+    **Solutions:**
+    - Ensure `CORS_ORIGIN` in server `.env` matches your client URL
+    - Default should be `http://localhost:5173`
+    - Restart the server after changing environment variables
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    **Error:** `Port 3000 is already in use`
+
+    **Solutions:**
+    - Change the `PORT` in server `.env` to another port (e.g., 3001)
+    - Kill the process using port 3000:
+      ```bash
+      # On macOS/Linux
+      lsof -ti:3000 | xargs kill -9
+
+      # On Windows
+      netstat -ano | findstr :3000
+      taskkill /PID <PID> /F
+      ```
+  </Accordion>
+
+  <Accordion title="Environment variables not loading">
+    **Error:** `process.env.VITE_BACKEND_URL is undefined`
+
+    **Solutions:**
+    - Ensure `.env` files are in the correct directories
+    - Restart both dev servers after creating `.env` files
+    - Vite variables must be prefixed with `VITE_`
+    - Don't commit `.env` files to version control
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Explore Features" icon="compass" href="/features/authentication">
+    Learn about user authentication, booking system, and more
+  </Card>
+  
+  <Card title="API Documentation" icon="book" href="/api/overview">
+    Dive into the API endpoints and data models
+  </Card>
+  
+  <Card title="Deployment Guide" icon="rocket" href="/guides/deployment">
+    Deploy OrionRides to production on Vercel
+  </Card>
+  
+  <Card title="Frontend Components" icon="cube" href="/frontend/components">
+    Learn about the React component architecture
+  </Card>
+</CardGroup>
